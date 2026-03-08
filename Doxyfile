@@ -1,0 +1,13 @@
+PROJECT_NAME           = "NanoTekSpice"
+INPUT                  = src/ include/ README.md
+RECURSIVE              = YES
+USE_MDFILE_AS_MAINPAGE = README.md
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_COLORSTYLE        = LIGHT
+
+HTML_EXTRA_STYLESHEET  = docs/doxygen-awesome/doxygen-awesome.css
+HTML_EXTRA_FILES       = docs/doxygen-awesome/doxygen-awesome-darkmode-toggle.js
+
+GENERATE_TREEVIEW      = YES
