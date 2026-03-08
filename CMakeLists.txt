@@ -7,7 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 file(GLOB_RECURSE SRC_FILES "src/*.cpp")
 list(REMOVE_ITEM SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 
-add_executable(arcade ${SRC_FILES} src/main.cpp)
+add_executable(arcade ${SRC_FILES} src/main.cpp
+        src/engine/ecs/Query.cpp
+        src/engine/ecs/Query.hpp)
 target_include_directories(arcade PRIVATE include src)
 target_compile_options(arcade PRIVATE -Wall -Wextra -Werror)
 
