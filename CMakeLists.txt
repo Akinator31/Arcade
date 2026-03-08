@@ -24,8 +24,7 @@ if (BUILD_TESTS)
         list(FILTER LIB_SRC EXCLUDE REGEX "src/main\\.cpp$")
         file(GLOB_RECURSE TEST_SRC "tests/*.cpp")
 
-        add_executable(unittests EXCLUDE_FROM_ALL ${LIB_SRC} ${TEST_SRC}
-                tests/tests_main.cpp)
+        add_executable(unittests ${LIB_SRC} ${TEST_SRC})
 
         target_compile_options(unittests PRIVATE -Wall -Wextra --coverage)
         target_link_options(unittests PRIVATE --coverage)
