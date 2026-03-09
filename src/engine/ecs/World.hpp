@@ -8,18 +8,89 @@
 #include <utility>
 #include <tuple>
 #include "System.hpp"
+#include "engine/reflection/TypeCounter.hpp"
 
 namespace ecs {
+    class World;
+
+    struct PluginFamily {
+    };
+
+    using PluginId = uint16_t;
+
+    template<typename T>
+    concept IsPlugin = requires(T plugin, World &world)
+    {
+        { plugin.load(world) };
+        { plugin.unload(world) };
+    };
+
     class World {
+        struct PluginRecord {
+            void *instance = nullptr;
+
+            void (*unload)(void *, World &) = nullptr;
+
+            void (*destroy)(void *) = nullptr;
+        };
+
         internal::EntityRegistry entity_registry;
         internal::ComponentRegistry component_registry;
         internal::ArchetypeRegistry archetype_registry;
         std::vector<QueryCache> queries;
         PhaseContainer phase_container;
         std::vector<Phase> phases;
+        std::vector<PluginRecord> loaded_plugins;
 
     public:
         World();
+
+        ~World();
+
+        template<typename T, typename... Args>
+        void plugin(Args &&... args) {
+            const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
+            if (id >= this->loaded_plugins.size()) {
+                this->loaded_plugins.resize(id + 1);
+            }
+            if (this->loaded_plugins[id].instance == nullptr) {
+                T *instance = new T(std::forward<Args>(args)...);
+                instance->load(*this);
+                this->loaded_plugins[id] = {
+                    instance,
+                    [](void *ptr, World &w) { static_cast<T *>(ptr)->unload(w); },
+                    [](void *ptr) { delete static_cast<T *>(ptr); }
+                };
+            }
+        }
+
+        template<typename T>
+        void removePlugin() {
+            if (const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
+                id < this->loaded_plugins.size() && this->loaded_plugins[id].instance != nullptr) {
+                this->loaded_plugins[id].unload(this->loaded_plugins[id].instance, *this);
+                this->loaded_plugins[id].destroy(this->loaded_plugins[id].instance);
+                this->loaded_plugins[id] = {nullptr, nullptr, nullptr};
+            }
+        }
+
+        template<typename T>
+        bool hasPlugin() const {
+            if (const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
+                id < this->loaded_plugins.size()) {
+                return this->loaded_plugins[id].instance != nullptr;
+            }
+            return false;
+        }
+
+        template<typename T>
+        T *getPlugin() const {
+            if (const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
+                id < this->loaded_plugins.size() && this->loaded_plugins[id].instance != nullptr) {
+                return static_cast<T *>(this->loaded_plugins[id].instance);
+            }
+            return nullptr;
+        }
 
         Entity entity();
 
@@ -45,16 +116,16 @@ namespace ecs {
 
         template<typename Phase>
         PhaseId phase() {
-            PhaseId id = this->phase_container.phase<Phase>();
+            const PhaseId id = this->phase_container.phase<Phase>();
             if (id >= this->phases.size()) {
                 this->phases.resize(id + 1);
             }
             return id;
         }
 
-        template<IsSystem System, typename Phase>
-        SystemId registerSystem() {
-            PhaseId phase_id = this->phase<Phase>();
+        template<IsSystem System>
+        SystemId system() {
+            PhaseId phase_id = this->phase<Update>();
             Query query;
             if constexpr (HasRequired<System>) {
                 System::with::require(query);
@@ -62,10 +133,28 @@ namespace ecs {
             if constexpr (HasExcluded<System>) {
                 System::without::exclude(query);
             }
+            if constexpr (HasPhase<System>) {
+                phase_id = this->phase<typename System::phase>();
+            }
             QueryID qid = this->cache(std::move(query));
             this->phases[phase_id].systems.push_back({qid, System::iter});
 
             return {phase_id, this->phases[phase_id].systems.size() - 1};
+        }
+
+        template<IsSystem System>
+        void remove() {
+            auto target_iter = System::iter;
+            for (auto &[systems]: this->phases) {
+                auto it = systems.begin();
+                while (it != systems.end()) {
+                    if (it->second == target_iter) {
+                        it = systems.erase(it);
+                    } else {
+                        ++it;
+                    }
+                }
+            }
         }
 
         void runSystem(SystemId sys);
@@ -76,7 +165,7 @@ namespace ecs {
 
         QueryID cache(Query &&q);
 
-        const datastructures::EcsVec<ArchetypeID> &matches(const QueryID qid) const;
+        const datastructures::EcsVec<ArchetypeID> &matches(QueryID qid) const;
 
         template<typename... Filter>
         static bool filter(ArchetypeView &view, internal::EntityRow row) {

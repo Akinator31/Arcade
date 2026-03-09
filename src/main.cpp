@@ -1,5 +1,4 @@
 #include <iostream>
-#include <ostream>
 
 #include "engine/ecs/World.hpp"
 
@@ -17,7 +16,7 @@ struct Player {
 };
 
 
-struct MySystem : With<Position, Velocity> {
+struct MySystem : With<Position, Velocity>, On<Update> {
     static void iter(ArchetypeView &view) {
         auto *positions = view.column<Position>();
         const auto *velocities = view.column<Velocity>();
@@ -33,7 +32,7 @@ struct MySystem : With<Position, Velocity> {
 int main() {
     ecs::World world;
 
-    world.registerSystem<MySystem, Update>();
+    world.system<MySystem>();
 
     world.progress();
 }

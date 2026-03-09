@@ -29,8 +29,8 @@ Test(system, basic_execution) {
     };
 
     ecs::World world;
-    world.phase<Update>();
-    const SystemId sys = world.registerSystem<MovementSystem, Update>();
+
+    const SystemId sys = world.system<MovementSystem>();
 
     const ecs::Entity e1 = world.entity();
     world.add<Position>(e1);
@@ -57,8 +57,8 @@ Test(system, exclude_component) {
     };
 
     ecs::World world;
-    world.phase<Update>();
-    const SystemId sys = world.registerSystem<PlayerOnlySystem, Update>();
+
+    const SystemId sys = world.system<PlayerOnlySystem>();
 
     const ecs::Entity p1 = world.entity();
     world.add<Position>(p1);
@@ -76,7 +76,7 @@ Test(system, exclude_component) {
 }
 
 Test(system, multiple_archetypes) {
-    struct GlobalGravitySystem : With<Velocity> {
+    struct GlobalGravitySystem : With<Velocity>, On<Update> {
         static void iter(ArchetypeView &view) {
             auto *velocities = view.column<Velocity>();
             for (uint32_t i = 0; i < view.count(); i++) {
@@ -87,7 +87,7 @@ Test(system, multiple_archetypes) {
 
     ecs::World world;
     world.phase<Update>();
-    const SystemId sys = world.registerSystem<GlobalGravitySystem, Update>();
+    const SystemId sys = world.system<GlobalGravitySystem>();
 
     const ecs::Entity e1 = world.entity();
     world.add<Velocity>(e1);
@@ -111,14 +111,14 @@ Test(system, multiple_archetypes) {
 }
 
 Test(system, different_phases) {
-    struct SystemA : With<Position> {
+    struct SystemA : With<Position>, On<PreUpdate> {
         static void iter(ArchetypeView &view) {
             auto *positions = view.column<Position>();
             for (uint32_t i = 0; i < view.count(); i++) positions[i].x += 1.0f;
         }
     };
 
-    struct SystemB : With<Position> {
+    struct SystemB : With<Position>, On<PostUpdate> {
         static void iter(ArchetypeView &view) {
             auto *positions = view.column<Position>();
             for (uint32_t i = 0; i < view.count(); i++) positions[i].x *= 2.0f;
@@ -126,11 +126,10 @@ Test(system, different_phases) {
     };
 
     ecs::World world;
-    world.phase<PreUpdate>();
-    world.phase<PostUpdate>();
 
-    const SystemId sysA = world.registerSystem<SystemA, PreUpdate>();
-    const SystemId sysB = world.registerSystem<SystemB, PostUpdate>();
+
+    const SystemId sysA = world.system<SystemA>();
+    const SystemId sysB = world.system<SystemB>();
 
     const ecs::Entity e = world.entity();
     world.add<Position>(e);
@@ -141,4 +140,29 @@ Test(system, different_phases) {
 
     world.runSystem(sysB);
     cr_assert_float_eq(world.get<Position>(e)->x, 6.0f, 0.001f);
+}
+
+Test(system, remove_system) {
+    struct SystemC : With<Position> {
+        static void iter(ArchetypeView &view) {
+            auto *positions = view.column<Position>();
+            for (uint32_t i = 0; i < view.count(); i++) positions[i].x += 5.0f;
+        }
+    };
+
+    ecs::World world;
+
+    world.system<SystemC>();
+
+    const ecs::Entity e = world.entity();
+    world.add<Position>(e);
+    world.get<Position>(e)->x = 0.0f;
+
+    world.progress();
+    cr_assert_float_eq(world.get<Position>(e)->x, 5.0f, 0.001f);
+
+    world.remove<SystemC>();
+
+    world.progress();
+    cr_assert_float_eq(world.get<Position>(e)->x, 5.0f, 0.001f);
 }

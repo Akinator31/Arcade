@@ -6,6 +6,15 @@ namespace ecs {
                 this->findOrCreateArchetype({});
     }
 
+    World::~World() {
+        for (auto& record : this->loaded_plugins) {
+            if (record.instance) {
+                record.unload(record.instance, *this);
+                record.destroy(record.instance);
+            }
+        }
+    }
+
     ArchetypeID World::findOrCreateArchetype(EntityType &&type) {
         auto [id, is_created] = this->archetype_registry.findOrCreateArchetype(std::move(type));
 

@@ -34,6 +34,11 @@ struct With {
     using with = All<Components...>;
 };
 
+template<typename Phase>
+struct On {
+    using phase = Phase;
+};
+
 template<typename... Components>
 struct Without {
     using without = All<Components...>;
@@ -50,6 +55,12 @@ concept HasRequired = requires(System system, Query &query)
     {
         System::with::require(query)
     };
+};
+
+template<typename System>
+concept HasPhase = requires()
+{
+    typename System::phase;
 };
 
 template<typename System>

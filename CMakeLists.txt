@@ -27,7 +27,8 @@ if (BUILD_TESTS)
 
         add_executable(unittests ${LIB_SRC} ${TEST_SRC}
                 tests/tests_ecs.cpp
-                tests/tests_system.cpp)
+                tests/tests_system.cpp
+                tests/tests_plugin.cpp)
 
         target_compile_options(unittests PRIVATE -Wall -Wextra --coverage)
         target_link_options(unittests PRIVATE --coverage)
