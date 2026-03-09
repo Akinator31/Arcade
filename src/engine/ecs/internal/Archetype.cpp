@@ -1,11 +1,11 @@
 #include "Archetype.hpp"
 
 namespace ecs::internal {
-    Archetype::Archetype(EntityType type,
+    Archetype::Archetype(EntityType &&type,
                          const ComponentRegistry &componentRegistry)
         : type(std::move(type)) {
         for (const auto &component: this->type) {
-            std::size_t size = componentRegistry.getSize(component);
+            const std::size_t size = componentRegistry.getSize(component);
             if (size == 0)
                 continue;
             this->columns.set(

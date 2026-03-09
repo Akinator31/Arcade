@@ -23,7 +23,7 @@ namespace ecs::internal {
         datastructures::SparseIndices addEdge;
         datastructures::SparseIndices removeEdge;
 
-        Archetype(EntityType type, const ComponentRegistry &componentRegistry);
+        Archetype(EntityType &&type, const ComponentRegistry &componentRegistry);
 
         ~Archetype();
 

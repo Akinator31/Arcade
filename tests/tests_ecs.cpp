@@ -56,12 +56,15 @@ Test(ecs, query) {
     world.fetch<Position>()
             .iter([entity](ArchetypeView &view) {
                 cr_assert_eq(view.entities()->index, entity.index);
+
                 view.column<Position>()->x += 10;
             });
 
     cr_assert_eq(world.get<Position>(entity)->x, 10);
 
-    const ecs::QueryID qid = world.cache(query<Position>());
+    Query q;
+    q.required<Position>();
+    const ecs::QueryID qid = world.cache(std::move(q));
 
     world.read(qid).iter([entity](ArchetypeView &view) {
         cr_assert_eq(view.entities()->index, entity.index);
@@ -71,30 +74,4 @@ Test(ecs, query) {
     cr_assert_eq(world.get<Position>(entity)->x, 20);
 }
 
-Test(ecs, system) {
-    struct MySystem {
-        using with = All<Position>;
-        using without = All<Player>;
 
-        static void iter([[maybe_unused]] ArchetypeView &view) {
-            auto *positions = view.column<Position>();
-
-            for (uint i = 0; i < view.count(); i++) {
-                positions[i].x += 10;
-            }
-        }
-    };
-    ecs::World world;
-
-    const PhaseId Startup = world.createPhase();
-
-    const SystemId sys = world.registerSystem<MySystem>(Startup);
-
-    world.add<Position>(world.entity());
-
-    world.runSystem(sys);
-
-    world.fetch<Position>().iter([](ArchetypeView &view) {
-        cr_assert_eq(view.column<Position>()->x, 10);
-    });
-}

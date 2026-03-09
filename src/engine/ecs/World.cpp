@@ -3,13 +3,16 @@
 namespace ecs {
     World::World() : archetype_registry(this->component_registry) {
         [[maybe_unused]] auto archeId =
-                this->archetype_registry.findOrCreateArchetype(EntityType());
+                this->findOrCreateArchetype({});
     }
 
     ArchetypeID World::findOrCreateArchetype(EntityType &&type) {
         auto [id, is_created] = this->archetype_registry.findOrCreateArchetype(std::move(type));
 
         if (is_created) {
+            for (const ComponentID cid: this->archetype_registry.getArchetype(id).getType()) {
+                this->component_registry.getRecord(cid).archetypes.push_back(id);
+            }
             for (QueryCache &query: this->queries) {
                 query.update(this->archetype_registry.getArchetype(id), id);
             }
@@ -62,6 +65,8 @@ namespace ecs {
         } else {
             EntityType newType = arch.getType().clone();
             newType.add(cid);
+
+            std::cout << "before" << (int) newType.count << std::endl;
             newArchId =
                     this->findOrCreateArchetype(std::move(newType));
             this->archetype_registry.getArchetype(record.archetypeId)
@@ -110,10 +115,76 @@ namespace ecs {
     }
 
     void World::updateMatches(QueryCache &cached) {
-        ArchetypeID i = 0;
-        for (const internal::Archetype &archetype: this->getArchetypes()) {
-            cached.update(archetype, i);
-            i += 1;
+        if (cached._required.count <= 0) {
+            ArchetypeID i = 0;
+            for (const internal::Archetype &archetype: this->getArchetypes()) {
+                cached.update(archetype, i);
+                i += 1;
+            }
+        } else {
+            for (const ComponentID first = cached._required.data[0]; const ArchetypeID id: this->component_registry.
+                 getArchetypes(first)) {
+                cached.update(this->archetype_registry.getArchetype(id), id);
+            }
         }
+    }
+
+    Entity World::entity() {
+        return this->entity_registry.create();
+    }
+
+    void World::kill(const Entity entity) {
+        return this->entity_registry.destroy(entity);
+    }
+
+    bool World::isAlive(const Entity entity) {
+        return this->entity_registry.isAlive(entity);
+    }
+
+    void World::runSystem(SystemId sys) {
+        auto [phase, index] = sys;
+        auto [qid, callback] = this->phases[phase].systems.at(index);
+        this->read(qid).iter(callback);
+    }
+
+    QueryID World::cache(Query &&q) {
+        const QueryID qid = this->queries.size();
+        this->queries.emplace_back(std::move(q));
+
+        this->updateMatches(this->queries.at(qid));
+
+        return qid;
+    }
+
+    const datastructures::EcsVec<ArchetypeID> &World::matches(const QueryID qid) const {
+        return this->queries.at(qid).matches;
+    }
+
+    World::TablesReader World::read(const QueryID qid) {
+        return {this->queries.at(qid).matches, *this};
+    }
+
+    const std::vector<SystemRegistered> &World::getSystems(const PhaseId phase) {
+        return this->phases[phase].systems;
+    }
+
+    void World::runAll(const PhaseId pid) {
+        for (auto [qid, sys]: this->getSystems(pid)) {
+            this->read(qid).iter(sys);
+        }
+    }
+
+    void World::progress() {
+        this->runAll(this->phase<PreUpdate>());
+        this->runAll(this->phase<Update>());
+        this->runAll(this->phase<PostUpdate>());
+        this->runAll(this->phase<PreRender>());
+        this->runAll(this->phase<Render>());
+    }
+
+    void World::start() {
+        this->runAll(this->phase<PreStartup>());
+        this->runAll(this->phase<Startup>());
+        this->runAll(this->phase<PreUpdate>());
     }
 } // namespace ecs

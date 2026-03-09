@@ -53,6 +53,8 @@ public:
     explicit QueryCache(Query &&q) : Query(std::move(q)) {
     }
 
+    explicit QueryCache() = default;
+
     void update(const ecs::internal::Archetype &archetype, const ecs::ArchetypeID id) {
         if (this->matchTable(archetype)) {
             this->matches.push_back(id);
@@ -100,6 +102,6 @@ public:
 template<typename... Components>
 Query query() {
     Query q;
-    (q.required<Components>(), ...);
+    q.required<Components...>();
     return q;
 }

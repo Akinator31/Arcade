@@ -7,53 +7,7 @@
 #include <iostream>
 #include <utility>
 #include <tuple>
-
-template<typename Func, typename Tuple, size_t... I>
-static inline void call(Func &func, Tuple &rows, uint i, std::index_sequence<I...>) {
-    func(std::get<I>(rows)[i]...);
-}
-
-struct Phase {
-    std::vector<std::pair<ecs::QueryID, void (*)(ArchetypeView &)> > systems;
-};
-
-using PhaseId = uint32_t;
-using SystemId = std::tuple<PhaseId, uint32_t>;
-
-
-template<typename... Components>
-struct All {
-    template<typename Func>
-    static void each(Func func) {
-        (func(reflection::type_id<Components>()), ...);
-    }
-};
-
-template<typename System>
-concept IsSystem = requires(System system, ArchetypeView &view)
-{
-    {
-        system.iter(view)
-    };
-};
-
-template<typename System>
-concept HasRequired = requires(System system)
-{
-    {
-        System::with::each([](ecs::ComponentID) {
-        })
-    };
-};
-
-template<typename System>
-concept HasExcluded = requires(System system)
-{
-    {
-        System::without::each([](ecs::ComponentID) {
-        })
-    };
-};
+#include "System.hpp"
 
 namespace ecs {
     class World {
@@ -61,20 +15,17 @@ namespace ecs {
         internal::ComponentRegistry component_registry;
         internal::ArchetypeRegistry archetype_registry;
         std::vector<QueryCache> queries;
+        PhaseContainer phase_container;
         std::vector<Phase> phases;
 
     public:
         World();
 
-        Entity entity() { return this->entity_registry.create(); }
+        Entity entity();
 
-        void kill(const Entity entity) {
-            return this->entity_registry.destroy(entity);
-        }
+        void kill(Entity entity);
 
-        [[nodiscard]] bool isAlive(const Entity entity) {
-            return this->entity_registry.isAlive(entity);
-        }
+        [[nodiscard]] bool isAlive(Entity entity);
 
         template<typename T>
         void add(const Entity entity) {
@@ -92,50 +43,40 @@ namespace ecs {
             return static_cast<T *>(this->get_id(entity, reflection::type_id<T>()));
         }
 
-        PhaseId createPhase() {
-            this->phases.emplace({});
-            return this->phases.size() - 1;
+        template<typename Phase>
+        PhaseId phase() {
+            PhaseId id = this->phase_container.phase<Phase>();
+            if (id >= this->phases.size()) {
+                this->phases.resize(id + 1);
+            }
+            return id;
         }
 
-        template<IsSystem System>
-        SystemId registerSystem(PhaseId phase) {
+        template<IsSystem System, typename Phase>
+        SystemId registerSystem() {
+            PhaseId phase_id = this->phase<Phase>();
             Query query;
             if constexpr (HasRequired<System>) {
-                System::with::each([&query](ComponentID cid) {
-                    query.require(cid);
-                });
+                System::with::require(query);
             }
             if constexpr (HasExcluded<System>) {
-                System::without::each([&query](ComponentID cid) {
-                    query.exclude(cid);
-                });
+                System::without::exclude(query);
             }
             QueryID qid = this->cache(std::move(query));
-            this->phases[phase].systems.push_back({qid, System::iter});
-            return {phase, this->phases[phase].systems.size() - 1};
+            this->phases[phase_id].systems.push_back({qid, System::iter});
+
+            return {phase_id, this->phases[phase_id].systems.size() - 1};
         }
 
-        void runSystem(SystemId sys) {
-            auto [phase, index] = sys;
-            auto [qid, callback] = this->phases[phase].systems.at(index);
-            this->read(qid).iter(callback);
-        }
+        void runSystem(SystemId sys);
 
         const std::vector<internal::Archetype> &getArchetypes() const;
 
         std::vector<internal::Archetype> &getArchetypes();
 
-        QueryID cache(Query &&q) {
-            QueryCache cached(std::move(q));
+        QueryID cache(Query &&q);
 
-            this->updateMatches(cached);
-            this->queries.push_back(std::move(cached));
-            return this->queries.size() - 1;
-        }
-
-        const datastructures::EcsVec<ArchetypeID> &matches(const QueryID qid) const {
-            return this->queries.at(qid).matches;
-        }
+        const datastructures::EcsVec<ArchetypeID> &matches(const QueryID qid) const;
 
         template<typename... Filter>
         static bool filter(ArchetypeView &view, internal::EntityRow row) {
@@ -157,9 +98,11 @@ namespace ecs {
             template<typename Func>
                 requires std::invocable<Func, ArchetypeView &>
             void iter(Func &&func) {
-                for (const ecs::ArchetypeID tableId: *this->matches) {
-                    auto view = ArchetypeView(this->world->getArchetypes().at(tableId), *this->world);
-                    func(view);
+                for (const ArchetypeID tableId: *this->matches) {
+                    if (auto view = ArchetypeView(this->world->getArchetypes().at(tableId), *this->world);
+                        view.count() > 0) {
+                        func(view);
+                    }
                 }
             }
         };
@@ -177,14 +120,21 @@ namespace ecs {
 
         template<typename... Components>
         auto fetch() {
-            QueryCache cached(std::move(query<Components...>()));
+            QueryCache cached;
+            cached.required<Components...>();
             this->updateMatches(cached);
             return OwnedTablesReader(std::move(cached), *this);
         }
 
-        TablesReader read(const QueryID qid) {
-            return {this->queries.at(qid).matches, *this};
-        }
+        TablesReader read(QueryID qid);
+
+        const std::vector<SystemRegistered> &getSystems(PhaseId phase);
+
+        void runAll(PhaseId pid);
+
+        void progress();
+
+        void start();
 
     private:
         void removeEntityOfArchetype(internal::Archetype &oldArch,

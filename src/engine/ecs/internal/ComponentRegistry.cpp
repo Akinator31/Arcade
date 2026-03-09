@@ -40,6 +40,9 @@ void ComponentRegistry::addRequired(const ComponentID cid, const ecs::ComponentI
 static constexpr std::vector<ArchetypeID> emptyArchetypes;
 
 const std::vector<ArchetypeID>& ComponentRegistry::getArchetypes(const ComponentID cid) const {
+  if (cid >= this->components.size()) {
+    return emptyArchetypes;
+  }
   return this->components[cid].archetypes;
 }
 } // namespace ecs::internal

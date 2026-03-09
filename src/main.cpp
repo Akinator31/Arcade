@@ -5,9 +5,11 @@
 
 
 struct Position {
+    float x, y;
 };
 
 struct Velocity {
+    float x, y;
 };
 
 
@@ -15,23 +17,23 @@ struct Player {
 };
 
 
-struct MySystem {
-    using with = All<Position>;
-    using without = All<Player>;
+struct MySystem : With<Position, Velocity> {
+    static void iter(ArchetypeView &view) {
+        auto *positions = view.column<Position>();
+        const auto *velocities = view.column<Velocity>();
 
-    static void iter([[maybe_unused]] ArchetypeView &view) {
-        puts("ok");
+        for (uint i = 0; i < view.count(); i++) {
+            positions[i].x += velocities[i].x;
+            positions[i].y += velocities[i].y;
+        }
     }
 };
+
 
 int main() {
     ecs::World world;
 
-    const PhaseId Startup = world.createPhase();
+    world.registerSystem<MySystem, Update>();
 
-    const SystemId sys = world.registerSystem<MySystem>(Startup);
-
-    world.add<Position>(world.entity());
-
-    world.runSystem(sys);
+    world.progress();
 }
