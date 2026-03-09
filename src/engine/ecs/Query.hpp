@@ -9,19 +9,11 @@
 #include "internal/Archetype.hpp"
 #include "engine/reflection/type_id.hpp"
 
-template<typename... Accessed>
 class Query {
 public:
     ecs::EntityType _required;
     ecs::EntityType _excluded;
 
-    explicit Query() {
-        this->required<Accessed...>();
-    }
-
-    explicit Query(ecs::EntityType &&required, ecs::EntityType &&excluded) : _required(std::move(required)),
-                                                                             _excluded(std::move(excluded)) {
-    }
 
     template<typename... Components>
     void required() {
@@ -31,6 +23,14 @@ public:
     template<typename... Components>
     void excluded() {
         (this->_excluded.add(reflection::type_id<Components>()), ...);
+    }
+
+    void require(const ecs::ComponentID cid) {
+        this->_required.add(cid);
+    }
+
+    void exclude(const ecs::ComponentID cid) {
+        this->_excluded.add(cid);
     }
 
     bool matchTable(const ecs::internal::Archetype &table) {
@@ -44,17 +44,13 @@ public:
         }
         return true;
     }
-
-    Query<> &&raw() {
-        return std::move(*reinterpret_cast<Query<> *>(this));
-    }
 };
 
-class QueryCache : public Query<> {
+class QueryCache : public Query {
 public:
     datastructures::EcsVec<ecs::ArchetypeID> matches = {};
 
-    explicit QueryCache(Query<> &&q) : Query<>(std::move(q)) {
+    explicit QueryCache(Query &&q) : Query(std::move(q)) {
     }
 
     void update(const ecs::internal::Archetype &archetype, const ecs::ArchetypeID id) {
@@ -102,6 +98,8 @@ public:
 
 
 template<typename... Components>
-Query<Components...> query() {
-    return Query<Components...>();
+Query query() {
+    Query q;
+    (q.required<Components>(), ...);
+    return q;
 }
