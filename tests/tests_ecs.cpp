@@ -33,7 +33,7 @@ Test(ecs, component) {
 
     world.add<Position>(entity);
     world.get<Position>(entity)->x = 10;
-    const auto* pos = world.get<Position>(entity);
+    const auto *pos = world.get<Position>(entity);
 
     cr_assert_eq(pos->x, 10);
 }
@@ -47,5 +47,20 @@ Test(ecs, query) {
     };
     world.add<Position>(entity);
 
-    cr_assert_eq(query<Position>(world).count(), 1);
+    world.fetch<Position>()
+            .iter([entity](ArchetypeView &view) {
+                cr_assert_eq(view.entities()->index, entity.index);
+                view.column<Position>()->x += 10;
+            });
+
+    cr_assert_eq(world.get<Position>(entity)->x, 10);
+
+    const ecs::QueryID qid = world.cache(query<Position>());
+
+    world.read(qid).iter([entity](ArchetypeView &view) {
+        cr_assert_eq(view.entities()->index, entity.index);
+        view.column<Position>()->x += 10;
+    });
+
+    cr_assert_eq(world.get<Position>(entity)->x, 20);
 }

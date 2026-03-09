@@ -4,69 +4,104 @@
 
 #pragma once
 #include <vector>
-
 #include "type.hpp"
 #include "World.hpp"
+#include "internal/Archetype.hpp"
 #include "engine/reflection/type_id.hpp"
 
-template <typename... Accessed>
+template<typename... Accessed>
 class Query {
-    std::vector<ecs::ComponentID> _required;
-    std::vector<ecs::ComponentID> _excluded;
-    std::vector<ecs::ArchetypeID> _matches;
-    ecs::World& _world;
-
 public:
-    explicit Query(ecs::World& world) : _world(world) {
+    ecs::EntityType _required;
+    ecs::EntityType _excluded;
+
+    explicit Query() {
         this->required<Accessed...>();
     }
 
-    template <typename... Components>
+    explicit Query(ecs::EntityType &&required, ecs::EntityType &&excluded) : _required(std::move(required)),
+                                                                             _excluded(std::move(excluded)) {
+    }
+
+    template<typename... Components>
     void required() {
-        (this->_required.push_back(reflection::type_id<Components>()), ...);
+        (this->_required.add(reflection::type_id<Components>()), ...);
     }
 
-    template <typename... Components>
+    template<typename... Components>
     void excluded() {
-        (this->_excluded.push_back(reflection::type_id<Components>()), ...);
+        (this->_excluded.add(reflection::type_id<Components>()), ...);
     }
 
-    bool matchType(const ecs::EntityType& type) {
-        for (const ecs::ComponentID cid : this->_required) {
-            if (!type.has(cid))
+    bool matchTable(const ecs::internal::Archetype &table) {
+        for (const ecs::ComponentID cid: this->_required) {
+            if (!table.has(cid))
                 return false;
         }
-        for (const ecs::ComponentID cid : this->_excluded) {
-            if (type.has(cid))
+        for (const ecs::ComponentID cid: this->_excluded) {
+            if (table.has(cid))
                 return false;
         }
         return true;
     }
 
-    void connect() {
-        int i = 0;
-
-        for (const ecs::internal::Archetype& table : this->_world.getArchetypes()) {
-            if (this->matchType(table.getType())) {
-                this->_matches.push_back(i);
-            }
-            i++;
-        }
-    }
-
-    uint32_t count() {
-        uint32_t result = 0;
-
-        for (const ecs::ArchetypeID tId : this->_matches) {
-            const ecs::internal::Archetype& table = this->_world.getArchetypes().at(tId);
-
-            result += table.count();
-        }
-        return result;
+    Query<> &&raw() {
+        return std::move(*reinterpret_cast<Query<> *>(this));
     }
 };
 
-template <typename... Components>
-Query<Components...> query(ecs::World& world) {
-    return Query<Components...>(world);
+class QueryCache : public Query<> {
+public:
+    datastructures::EcsVec<ecs::ArchetypeID> matches = {};
+
+    explicit QueryCache(Query<> &&q) : Query<>(std::move(q)) {
+    }
+
+    void update(const ecs::internal::Archetype &archetype, const ecs::ArchetypeID id) {
+        if (this->matchTable(archetype)) {
+            this->matches.push_back(id);
+        }
+    }
+};
+
+class ArchetypeView {
+    ecs::internal::Archetype &archetype;
+
+public:
+    ecs::World &world;
+
+    explicit ArchetypeView(ecs::internal::Archetype &archetype, ecs::World &world)
+        : archetype(archetype), world(world) {
+    }
+
+    [[nodiscard]] uint32_t count() const {
+        return this->archetype.count();
+    }
+
+    [[nodiscard]] ecs::Entity entity(const std::size_t index) const {
+        return this->archetype.getEntities()[index];
+    }
+
+    [[nodiscard]] const ecs::Entity *entities() const {
+        return this->archetype.getEntities();
+    }
+
+    template<typename T>
+    T *column() {
+        return static_cast<T *>(this->archetype.getColumn(reflection::type_id<T>()));
+    }
+
+    template<typename T>
+    T *optional() {
+        if (const ecs::ComponentID cid = reflection::type_id<T>(); archetype.has(cid)) {
+            return static_cast<T *>(this->archetype.getColumn(cid));
+        }
+        return nullptr;
+    }
+};
+
+
+template<typename... Components>
+Query<Components...> query() {
+    return Query<Components...>();
 }
