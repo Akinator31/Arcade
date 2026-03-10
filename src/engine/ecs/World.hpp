@@ -7,6 +7,8 @@
 #include <iostream>
 #include <utility>
 #include <tuple>
+
+#include "Component.hpp"
 #include "System.hpp"
 #include "engine/reflection/TypeCounter.hpp"
 #include "internal/EventRegistry.hpp"
@@ -128,10 +130,20 @@ namespace ecs {
         template<typename T>
         void add(const Entity entity) {
             this->component_registry.registerComponent<T>();
-            const bool is_added = this->add_id(entity, reflection::type_id<T>());
-            if constexpr (HasOnAdd<T>) {
-                if (is_added) {
+
+            if (this->add_id(entity, reflection::type_id<T>())) {
+                if constexpr (HasOnAdd<T>) {
                     T::onAdd(*this, entity);
+                }
+                if constexpr (HasFromWorldConstructor<T>) {
+                    T *value = this->get<T>(entity);
+                    *value = T(*this);
+                } else if constexpr (HasDefaultConstructor<T>) {
+                    T *value = this->get<T>(entity);
+                    *value = T();
+                }
+                if constexpr (HasRequiredComponents<T>) {
+                    T::add(*this, entity);
                 }
             }
         }
@@ -144,6 +156,12 @@ namespace ecs {
         template<typename T>
         T *get(const Entity entity) {
             return static_cast<T *>(this->get_id(entity, reflection::type_id<T>()));
+        }
+
+        template<typename T>
+        bool has(const Entity entity) {
+            return this->archetype_registry.getArchetype(this->entity_registry.getRecord(entity).archetypeId).has(
+                reflection::type_id<T>());
         }
 
         template<typename T>
@@ -342,3 +360,10 @@ namespace ecs {
         source->entities.push_back(entity);
     }
 } // namespace ecs
+
+template<typename... Components>
+struct Required {
+    static void add(ecs::World &world, const ecs::Entity entity) {
+        (world.add<Components>(entity), ...);
+    }
+};
