@@ -166,6 +166,14 @@ namespace ecs {
             this->set<relation::RelationTarget<T> >(source, {target});
         }
 
+        template<typename Event>
+        void emit(const Entity entity, Event evt) {
+            if (const uint64_t id = this->id<Event>(entity); this->entity_event_map.contains(id)) {
+                auto *sys = static_cast<EntityEvent<Event> *>(this->entity_event_map.at(id));
+                sys->callback(*this, entity, evt);
+            }
+        }
+
         template<typename Phase>
         PhaseId phase() {
             const PhaseId id = this->phase_container.phase<Phase>();

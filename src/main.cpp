@@ -29,4 +29,6 @@ int main() {
     world.listen<Damaged>(player, [](auto &, auto, auto) {
         puts("player damaged");
     });
+
+    world.emit(player, Damaged{10});
 }

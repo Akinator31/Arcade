@@ -20,22 +20,13 @@ namespace ecs {
 }
 
 namespace ecs::internal {
-    class EventRegistry {
+    struct EventRegistry {
         std::unordered_map<uint64_t, void *> entity_event_map;
 
         template<typename Event>
         static uint64_t id(const Entity entity) {
             return static_cast<uint64_t>(entity.index) << 32 | static_cast<uint64_t>(EventType::id<
                        Event>());
-        }
-
-    public:
-        template<typename Event>
-        void emit(World &world, const Entity entity, Event evt) {
-            if (const uint64_t id = this->id<Event>(entity); this->entity_event_map.contains(id)) {
-                auto *sys = static_cast<EntityEvent<Event> *>(this->entity_event_map.at(id));
-                sys->callback(world, entity, evt);
-            }
         }
 
         template<typename Event, typename Func>

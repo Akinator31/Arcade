@@ -31,7 +31,8 @@ if (BUILD_TESTS)
                 tests/tests_ecs.cpp
                 tests/tests_system.cpp
                 tests/tests_plugin.cpp
-                tests/tests_observer.cpp)
+                tests/tests_observer.cpp
+                tests/tests_entity_event.cpp)
 
         target_compile_options(unittests PRIVATE -Wall -Wextra --coverage)
         target_link_options(unittests PRIVATE --coverage)
