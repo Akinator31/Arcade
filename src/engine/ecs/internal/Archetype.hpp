@@ -7,9 +7,16 @@
 #include <optional>
 
 namespace ecs::internal {
+    class Archetype;
+}
+
+using ObserverFunc = void(*)(ecs::internal::Archetype &, ecs::internal::EntityRow row);
+
+namespace ecs::internal {
     struct ArchetypeColumn {
         void *buffer = nullptr;
         std::uint16_t elementSize = 0;
+        std::vector<ObserverFunc> onRemove;
     };
 
 
@@ -17,11 +24,15 @@ namespace ecs::internal {
         EntityType type;
         datastructures::EcsVec<Entity, uint16_t> entities;
         // store at ComponentID: { buffer, element_size }
-        datastructures::SparseSet<ArchetypeColumn, uint8_t> columns;
 
     public:
+        datastructures::SparseSet<ArchetypeColumn, uint8_t> columns;
+
         datastructures::SparseIndices addEdge;
         datastructures::SparseIndices removeEdge;
+
+        datastructures::EcsVec<ObserverFunc> onAdd;
+        datastructures::EcsVec<ObserverFunc> onDespawn;
 
         Archetype(EntityType &&type, const ComponentRegistry &componentRegistry);
 
@@ -43,13 +54,13 @@ namespace ecs::internal {
 
         [[nodiscard]] void *getComponent(const EntityRow row,
                                          const ComponentID component) const {
-            auto &[buf, size] = this->columns.get(component);
+            auto &[buf, size, _] = this->columns.get(component);
             return static_cast<char *>(buf) + row * size;
         }
 
         void copyTo(const EntityRow row, const ComponentID component,
                     void *dest) const {
-            auto &[buf, size] = this->columns.get(component);
+            auto &[buf, size, _] = this->columns.get(component);
             std::memcpy(dest, static_cast<char *>(buf) + row * size, size);
         }
 

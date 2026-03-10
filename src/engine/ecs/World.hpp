@@ -13,6 +13,20 @@
 namespace ecs {
     class World;
 
+    namespace relation {
+        template<typename T>
+        struct RelationSource {
+            datastructures::EcsVec<ecs::Entity> entities;
+        };
+
+        template<typename T>
+        struct RelationTarget {
+            ecs::Entity target;
+
+            static void onSet(World &world, Entity entity, const RelationTarget<T> *value);
+        };
+    }
+
     struct PluginFamily {
     };
 
@@ -24,6 +38,18 @@ namespace ecs {
         { plugin.load(world) };
         { plugin.unload(world) };
     };
+
+    template<typename T>
+    concept HasOnAdd = requires(World &world, Entity entity)
+    {
+        { T::onAdd(world, entity) };
+    };
+    template<typename T>
+    concept HasOnSet = requires(World &world, Entity entity, const T *value)
+    {
+        { T::onSet(world, entity, value) };
+    };
+
 
     class World {
         struct PluginRecord {
@@ -101,7 +127,12 @@ namespace ecs {
         template<typename T>
         void add(const Entity entity) {
             this->component_registry.registerComponent<T>();
-            this->add_id(entity, reflection::type_id<T>());
+            const bool is_added = this->add_id(entity, reflection::type_id<T>());
+            if constexpr (HasOnAdd<T>) {
+                if (is_added) {
+                    T::onAdd(*this, entity);
+                }
+            }
         }
 
         template<typename T>
@@ -114,6 +145,26 @@ namespace ecs {
             return static_cast<T *>(this->get_id(entity, reflection::type_id<T>()));
         }
 
+        template<typename T>
+        void set(const Entity entity, const T &value) {
+            T *current = this->get<T>(entity);
+            memcpy(current, &value, sizeof(T));
+            if constexpr (HasOnSet<T>) {
+                T::onSet(*this, entity, current);
+            }
+        }
+
+        template<typename T>
+        void set(const Entity entity, const T &&value) {
+            T *current = this->get<T>(entity);
+            *current = value;
+        }
+
+        template<typename T>
+        void relate(Entity source, Entity target) {
+            this->set<relation::RelationTarget<T> >(source, {target});
+        }
+
         template<typename Phase>
         PhaseId phase() {
             const PhaseId id = this->phase_container.phase<Phase>();
@@ -123,7 +174,7 @@ namespace ecs {
             return id;
         }
 
-        template<IsSystem System>
+        template<typename System>
         SystemId system() {
             PhaseId phase_id = this->phase<Update>();
             Query query;
@@ -133,13 +184,32 @@ namespace ecs {
             if constexpr (HasExcluded<System>) {
                 System::without::exclude(query);
             }
+
             if constexpr (HasPhase<System>) {
                 phase_id = this->phase<typename System::phase>();
             }
             QueryID qid = this->cache(std::move(query));
-            this->phases[phase_id].systems.push_back({qid, System::iter});
 
-            return {phase_id, this->phases[phase_id].systems.size() - 1};
+            if constexpr (IsObserver<System>) {
+                this->queries.at(qid).on_add = [](World &world, const ArchetypeID id) {
+                    if constexpr (std::is_same<typename System::phase, Despawn>()) {
+                        world.archetype_registry.getArchetype(id).onDespawn.push_back(System::observe);
+                    } else if constexpr (std::is_same<typename System::phase, Remove>()) {
+                        world.archetype_registry.getArchetype(id).columns.get(
+                            reflection::type_id<typename System::phase>()).onRemove.push_back(System::observe);
+                    } else {
+                        world.archetype_registry.getArchetype(id).onAdd.push_back(System::observe);
+                    }
+                };
+            } else if constexpr (IsSystem<System>) {
+                this->phases[phase_id].systems.push_back({qid, System::iter});
+                return {phase_id, this->phases[phase_id].systems.size() - 1};
+            } else {
+                static_assert(false, "system is not valid");
+            }
+
+
+            return {0, 0};
         }
 
         template<IsSystem System>
@@ -151,7 +221,7 @@ namespace ecs {
                     if (it->second == target_iter) {
                         it = systems.erase(it);
                     } else {
-                        ++it;
+                        it += 1;
                     }
                 }
             }
@@ -229,7 +299,7 @@ namespace ecs {
         void removeEntityOfArchetype(internal::Archetype &oldArch,
                                      internal::EntityRow row);
 
-        void add_id(Entity entity, ComponentID cid);
+        bool add_id(Entity entity, ComponentID cid);
 
         void remove_id(Entity entity, ComponentID cid);
 
@@ -241,4 +311,15 @@ namespace ecs {
 
         ArchetypeID findOrCreateArchetype(EntityType &&type);
     };
+
+    template<typename T>
+    void relation::RelationTarget<T>::onSet(
+        World &world,
+        Entity entity,
+        const RelationTarget<T> *value
+    ) {
+        world.add<RelationSource<T> >(value->target);
+        RelationSource<T> *source = world.get<RelationSource<T> >(value->target);
+        source->entities.push_back(entity);
+    }
 } // namespace ecs

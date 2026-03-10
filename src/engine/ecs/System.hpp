@@ -34,6 +34,23 @@ struct With {
     using with = All<Components...>;
 };
 
+struct Add {
+};
+
+struct Remove {
+};
+
+struct Despawn {
+};
+
+
+template<typename T>
+concept IsObserver = requires(ecs::internal::Archetype &table, ecs::internal::EntityRow row)
+{
+    { T::observe(table, row) };
+};
+
+
 template<typename Phase>
 struct On {
     using phase = Phase;

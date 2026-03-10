@@ -33,7 +33,7 @@ public:
         this->_excluded.add(cid);
     }
 
-    bool matchTable(const ecs::internal::Archetype &table) {
+    [[nodiscard]] bool matchTable(const ecs::internal::Archetype &table) const {
         for (const ecs::ComponentID cid: this->_required) {
             if (!table.has(cid))
                 return false;
@@ -48,6 +48,8 @@ public:
 
 class QueryCache : public Query {
 public:
+    void (*on_add)(ecs::World &, ecs::ArchetypeID id) = nullptr;
+
     datastructures::EcsVec<ecs::ArchetypeID> matches = {};
 
     explicit QueryCache(Query &&q) : Query(std::move(q)) {
@@ -55,8 +57,11 @@ public:
 
     explicit QueryCache() = default;
 
-    void update(const ecs::internal::Archetype &archetype, const ecs::ArchetypeID id) {
+    void update(ecs::World &world, const ecs::internal::Archetype &archetype, const ecs::ArchetypeID id) {
         if (this->matchTable(archetype)) {
+            if (this->on_add) {
+                this->on_add(world, id);
+            }
             this->matches.push_back(id);
         }
     }

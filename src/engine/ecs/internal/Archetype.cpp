@@ -10,13 +10,13 @@ namespace ecs::internal {
                 continue;
             this->columns.set(
                 component,
-                {malloc(size), static_cast<std::uint16_t>(size)});
+                ArchetypeColumn(malloc(size), static_cast<std::uint16_t>(size), {}));
         }
     }
 
     Archetype::~Archetype() {
         for (std::size_t i = 0; i < this->columns.size(); i++) {
-            auto &[buf, size] = this->columns[i];
+            auto &[buf, size, _] = this->columns[i];
             free(buf);
         }
     }
@@ -29,11 +29,15 @@ namespace ecs::internal {
         if (needs_realloc) {
             const uint32_t newCapacity = this->entities.capacity;
             for (std::size_t i = 0; i < this->columns.size(); i++) {
-                auto &[buf, size] = this->columns[i];
+                auto &[buf, size, _] = this->columns[i];
                 buf = realloc(buf, size * newCapacity);
                 std::memset(static_cast<char *>(buf) + count * size, 0,
                             (newCapacity - count) * size);
             }
+        }
+
+        for (const auto &sys: this->onAdd) {
+            sys(*this, count);
         }
         return static_cast<EntityRow>(count);
     }
@@ -44,7 +48,7 @@ namespace ecs::internal {
 
         if (static_cast<std::size_t>(row) != last) {
             for (std::size_t i = 0; i < this->columns.size(); i++) {
-                auto &[buf, size] = this->columns[i];
+                auto &[buf, size, _] = this->columns[i];
                 auto *base = static_cast<char *>(buf);
                 std::memcpy(base + row * size, base + last * size, size);
             }
@@ -53,8 +57,10 @@ namespace ecs::internal {
         }
 
         this->entities.pop_back();
+
         return swapped;
     }
+
 
     void *Archetype::getColumn(const ComponentID component) const {
         return this->columns.get(component).buffer;
