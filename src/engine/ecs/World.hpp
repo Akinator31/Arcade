@@ -1,40 +1,244 @@
 #pragma once
+#include "Query.hpp"
 #include "internal/ArchetypeRegistry.hpp"
 #include "internal/EntityRegistry.hpp"
+#include <array>
+#include <functional>
+#include <iostream>
+#include <utility>
+#include <tuple>
+#include "System.hpp"
+#include "engine/reflection/TypeCounter.hpp"
 
 namespace ecs {
-class World {
-  internal::EntityRegistry entity_registry;
-  internal::ComponentRegistry component_registry;
-  internal::ArchetypeRegistry archetype_registry;
+    class World;
 
-public:
-  World();
-  Entity entity() { return this->entity_registry.create(); }
-  void kill(const Entity entity) {
-    return this->entity_registry.destroy(entity);
-  }
-  [[nodiscard]] bool isAlive(const Entity entity) {
-    return this->entity_registry.isAlive(entity);
-  }
-  template <typename T> void add(const Entity entity) {
-    this->component_registry.registerComponent<T>();
-    this->add_id(entity, reflection::type_id<T>());
-  }
-  template <typename T> void remove(const Entity entity) {
-    this->remove_id(entity, reflection::type_id<T>());
-  }
-  template <typename T> T *get(const Entity entity) {
-    return static_cast<T *>(this->get_id(entity, reflection::type_id<T>()));
-  }
+    struct PluginFamily {
+    };
 
-private:
-  void removeEntityOfArchetype(internal::Archetype &oldArch,
-                               internal::EntityRow row);
-  void add_id(Entity entity, ComponentID cid);
-  void remove_id(Entity entity, ComponentID cid);
-  void *get_id(Entity entity, ComponentID cid);
+    using PluginId = uint16_t;
 
-  void migrate(Entity, ArchetypeID newArchId);
-};
+    template<typename T>
+    concept IsPlugin = requires(T plugin, World &world)
+    {
+        { plugin.load(world) };
+        { plugin.unload(world) };
+    };
+
+    class World {
+        struct PluginRecord {
+            void *instance = nullptr;
+
+            void (*unload)(void *, World &) = nullptr;
+
+            void (*destroy)(void *) = nullptr;
+        };
+
+        internal::EntityRegistry entity_registry;
+        internal::ComponentRegistry component_registry;
+        internal::ArchetypeRegistry archetype_registry;
+        std::vector<QueryCache> queries;
+        PhaseContainer phase_container;
+        std::vector<Phase> phases;
+        std::vector<PluginRecord> loaded_plugins;
+
+    public:
+        World();
+
+        ~World();
+
+        template<typename T, typename... Args>
+        void plugin(Args &&... args) {
+            const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
+            if (id >= this->loaded_plugins.size()) {
+                this->loaded_plugins.resize(id + 1);
+            }
+            if (this->loaded_plugins[id].instance == nullptr) {
+                T *instance = new T(std::forward<Args>(args)...);
+                instance->load(*this);
+                this->loaded_plugins[id] = {
+                    instance,
+                    [](void *ptr, World &w) { static_cast<T *>(ptr)->unload(w); },
+                    [](void *ptr) { delete static_cast<T *>(ptr); }
+                };
+            }
+        }
+
+        template<typename T>
+        void removePlugin() {
+            if (const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
+                id < this->loaded_plugins.size() && this->loaded_plugins[id].instance != nullptr) {
+                this->loaded_plugins[id].unload(this->loaded_plugins[id].instance, *this);
+                this->loaded_plugins[id].destroy(this->loaded_plugins[id].instance);
+                this->loaded_plugins[id] = {nullptr, nullptr, nullptr};
+            }
+        }
+
+        template<typename T>
+        bool hasPlugin() const {
+            if (const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
+                id < this->loaded_plugins.size()) {
+                return this->loaded_plugins[id].instance != nullptr;
+            }
+            return false;
+        }
+
+        template<typename T>
+        T *getPlugin() const {
+            if (const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
+                id < this->loaded_plugins.size() && this->loaded_plugins[id].instance != nullptr) {
+                return static_cast<T *>(this->loaded_plugins[id].instance);
+            }
+            return nullptr;
+        }
+
+        Entity entity();
+
+        void kill(Entity entity);
+
+        [[nodiscard]] bool isAlive(Entity entity);
+
+        template<typename T>
+        void add(const Entity entity) {
+            this->component_registry.registerComponent<T>();
+            this->add_id(entity, reflection::type_id<T>());
+        }
+
+        template<typename T>
+        void remove(const Entity entity) {
+            this->remove_id(entity, reflection::type_id<T>());
+        }
+
+        template<typename T>
+        T *get(const Entity entity) {
+            return static_cast<T *>(this->get_id(entity, reflection::type_id<T>()));
+        }
+
+        template<typename Phase>
+        PhaseId phase() {
+            const PhaseId id = this->phase_container.phase<Phase>();
+            if (id >= this->phases.size()) {
+                this->phases.resize(id + 1);
+            }
+            return id;
+        }
+
+        template<IsSystem System>
+        SystemId system() {
+            PhaseId phase_id = this->phase<Update>();
+            Query query;
+            if constexpr (HasRequired<System>) {
+                System::with::require(query);
+            }
+            if constexpr (HasExcluded<System>) {
+                System::without::exclude(query);
+            }
+            if constexpr (HasPhase<System>) {
+                phase_id = this->phase<typename System::phase>();
+            }
+            QueryID qid = this->cache(std::move(query));
+            this->phases[phase_id].systems.push_back({qid, System::iter});
+
+            return {phase_id, this->phases[phase_id].systems.size() - 1};
+        }
+
+        template<IsSystem System>
+        void remove() {
+            auto target_iter = System::iter;
+            for (auto &[systems]: this->phases) {
+                auto it = systems.begin();
+                while (it != systems.end()) {
+                    if (it->second == target_iter) {
+                        it = systems.erase(it);
+                    } else {
+                        ++it;
+                    }
+                }
+            }
+        }
+
+        void runSystem(SystemId sys);
+
+        const std::vector<internal::Archetype> &getArchetypes() const;
+
+        std::vector<internal::Archetype> &getArchetypes();
+
+        QueryID cache(Query &&q);
+
+        const datastructures::EcsVec<ArchetypeID> &matches(QueryID qid) const;
+
+        template<typename... Filter>
+        static bool filter(ArchetypeView &view, internal::EntityRow row) {
+            return (Filter{}(view, row) && ...);
+        }
+
+        class TablesReader {
+        protected:
+            const datastructures::EcsVec<ArchetypeID> *matches = nullptr;
+            World *world = nullptr;
+
+        public:
+            TablesReader() = default;
+
+            TablesReader(const datastructures::EcsVec<ArchetypeID> &matches, World &world)
+                : matches(&matches), world(&world) {
+            }
+
+            template<typename Func>
+                requires std::invocable<Func, ArchetypeView &>
+            void iter(Func &&func) {
+                for (const ArchetypeID tableId: *this->matches) {
+                    if (auto view = ArchetypeView(this->world->getArchetypes().at(tableId), *this->world);
+                        view.count() > 0) {
+                        func(view);
+                    }
+                }
+            }
+        };
+
+        class OwnedTablesReader : public TablesReader {
+            QueryCache cache;
+
+        public:
+            explicit OwnedTablesReader(QueryCache &&cache, World &world) : TablesReader(),
+                                                                           cache(std::move(cache)) {
+                this->matches = &this->cache.matches;
+                this->world = &world;
+            }
+        };
+
+        template<typename... Components>
+        auto fetch() {
+            QueryCache cached;
+            cached.required<Components...>();
+            this->updateMatches(cached);
+            return OwnedTablesReader(std::move(cached), *this);
+        }
+
+        TablesReader read(QueryID qid);
+
+        const std::vector<SystemRegistered> &getSystems(PhaseId phase);
+
+        void runAll(PhaseId pid);
+
+        void progress();
+
+        void start();
+
+    private:
+        void removeEntityOfArchetype(internal::Archetype &oldArch,
+                                     internal::EntityRow row);
+
+        void add_id(Entity entity, ComponentID cid);
+
+        void remove_id(Entity entity, ComponentID cid);
+
+        void *get_id(Entity entity, ComponentID cid);
+
+        void migrate(Entity, ArchetypeID newArchId);
+
+        void updateMatches(QueryCache &cached);
+
+        ArchetypeID findOrCreateArchetype(EntityType &&type);
+    };
 } // namespace ecs
