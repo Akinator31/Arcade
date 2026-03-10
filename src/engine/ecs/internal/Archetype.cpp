@@ -8,9 +8,14 @@ namespace ecs::internal {
             const std::size_t size = componentRegistry.getSize(component);
             if (size == 0)
                 continue;
+
+
+            auto col = ArchetypeColumn(malloc(size), static_cast<std::uint16_t>(size), {});
+
             this->columns.set(
                 component,
-                ArchetypeColumn(malloc(size), static_cast<std::uint16_t>(size), {}));
+                col
+            );
         }
     }
 

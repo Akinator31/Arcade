@@ -9,6 +9,7 @@
 #include <tuple>
 #include "System.hpp"
 #include "engine/reflection/TypeCounter.hpp"
+#include "internal/EventRegistry.hpp"
 
 namespace ecs {
     class World;
@@ -51,7 +52,7 @@ namespace ecs {
     };
 
 
-    class World {
+    class World : public internal::EventRegistry {
         struct PluginRecord {
             void *instance = nullptr;
 
@@ -194,9 +195,8 @@ namespace ecs {
                 this->queries.at(qid).on_add = [](World &world, const ArchetypeID id) {
                     if constexpr (std::is_same<typename System::phase, Despawn>()) {
                         world.archetype_registry.getArchetype(id).onDespawn.push_back(System::observe);
-                    } else if constexpr (std::is_same<typename System::phase, Remove>()) {
-                        world.archetype_registry.getArchetype(id).columns.get(
-                            reflection::type_id<typename System::phase>()).onRemove.push_back(System::observe);
+                    } else if constexpr (IsOnRemove<typename System::phase>) {
+                        System::phase::add(world.archetype_registry.getArchetype(id), System::observe);
                     } else {
                         world.archetype_registry.getArchetype(id).onAdd.push_back(System::observe);
                     }
@@ -206,9 +206,8 @@ namespace ecs {
 
                     if constexpr (std::is_same<typename System::phase, Despawn>()) {
                         arch.onDespawn.push_back(System::observe);
-                    } else if constexpr (std::is_same<typename System::phase, Remove>()) {
-                        arch.columns.get(
-                            reflection::type_id<typename System::phase>()).onRemove.push_back(System::observe);
+                    } else if constexpr (IsOnRemove<typename System::phase>) {
+                        System::phase::add(arch, System::observe);
                     } else {
                         arch.onAdd.push_back(System::observe);
                     }

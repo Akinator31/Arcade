@@ -16,7 +16,22 @@ namespace ecs::internal {
     struct ArchetypeColumn {
         void *buffer = nullptr;
         std::uint16_t elementSize = 0;
-        std::vector<ObserverFunc> onRemove;
+
+        struct {
+            ObserverFunc *data = nullptr;
+            uint8_t size = 0;
+            uint8_t capacity = 0;
+
+            void push_back(const ObserverFunc value) {
+                if (this->size >= this->capacity) {
+                    this->capacity = this->capacity == 0 ? 1 : this->capacity * 2;
+                    this->data = static_cast<ObserverFunc *>(
+                        realloc(this->data, this->capacity * sizeof(ObserverFunc)));
+                }
+                std::memcpy(this->data + this->size, &value, sizeof(ObserverFunc));
+                this->size += 1;
+            }
+        } onRemove;
     };
 
 

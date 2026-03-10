@@ -90,8 +90,9 @@ namespace ecs {
         if (!arch.has(cid))
             return;
 
-        for (const auto &sys: arch.columns.get(cid).onRemove) {
-            sys(arch, record.row);
+        const auto &onRemove = arch.columns.get(cid).onRemove;
+        for (uint i = 0; i < onRemove.size; i++) {
+            onRemove.data[i](arch, record.row);
         }
         ArchetypeID newArchId;
         if (arch.removeEdge.has(cid)) {

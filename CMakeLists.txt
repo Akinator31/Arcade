@@ -9,7 +9,8 @@ list(REMOVE_ITEM SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 
 add_executable(arcade ${SRC_FILES} src/main.cpp
         src/engine/ecs/Query.hpp
-        src/engine/datastructure/EcsString.hpp)
+        src/engine/datastructure/EcsString.hpp
+        src/engine/ecs/internal/EventRegistry.hpp)
 target_include_directories(arcade PRIVATE include src)
 target_compile_options(arcade PRIVATE -Wall -Wextra -Werror)
 

@@ -16,12 +16,17 @@ struct MySystem : With<Player>, On<Add> {
     }
 };
 
+struct Damaged {
+    int value;
+};
+
 
 int main() {
     ecs::World world;
 
+    const ecs::Entity player = world.entity();
 
-    world.system<MySystem>();
-
-    world.add<Player>(world.entity());
+    world.listen<Damaged>(player, [](auto &, auto, auto) {
+        puts("player damaged");
+    });
 }
