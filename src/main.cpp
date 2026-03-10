@@ -13,6 +13,4 @@ struct Player : Required<ChildOf> {
 
 int main() {
     ecs::World world;
-
-    const ecs::Entity player = world.entity();
 }
