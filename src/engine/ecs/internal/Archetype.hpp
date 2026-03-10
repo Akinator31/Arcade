@@ -7,9 +7,31 @@
 #include <optional>
 
 namespace ecs::internal {
+    class Archetype;
+}
+
+using ObserverFunc = void(*)(ecs::internal::Archetype &, ecs::internal::EntityRow row);
+
+namespace ecs::internal {
     struct ArchetypeColumn {
         void *buffer = nullptr;
         std::uint16_t elementSize = 0;
+
+        struct {
+            ObserverFunc *data = nullptr;
+            uint8_t size = 0;
+            uint8_t capacity = 0;
+
+            void push_back(const ObserverFunc value) {
+                if (this->size >= this->capacity) {
+                    this->capacity = this->capacity == 0 ? 1 : this->capacity * 2;
+                    this->data = static_cast<ObserverFunc *>(
+                        realloc(this->data, this->capacity * sizeof(ObserverFunc)));
+                }
+                std::memcpy(this->data + this->size, &value, sizeof(ObserverFunc));
+                this->size += 1;
+            }
+        } onRemove;
     };
 
 
@@ -17,11 +39,15 @@ namespace ecs::internal {
         EntityType type;
         datastructures::EcsVec<Entity, uint16_t> entities;
         // store at ComponentID: { buffer, element_size }
-        datastructures::SparseSet<ArchetypeColumn, uint8_t> columns;
 
     public:
+        datastructures::SparseSet<ArchetypeColumn, uint8_t> columns;
+
         datastructures::SparseIndices addEdge;
         datastructures::SparseIndices removeEdge;
+
+        datastructures::EcsVec<ObserverFunc> onAdd;
+        datastructures::EcsVec<ObserverFunc> onDespawn;
 
         Archetype(EntityType &&type, const ComponentRegistry &componentRegistry);
 
@@ -43,13 +69,13 @@ namespace ecs::internal {
 
         [[nodiscard]] void *getComponent(const EntityRow row,
                                          const ComponentID component) const {
-            auto &[buf, size] = this->columns.get(component);
+            auto &[buf, size, _] = this->columns.get(component);
             return static_cast<char *>(buf) + row * size;
         }
 
         void copyTo(const EntityRow row, const ComponentID component,
                     void *dest) const {
-            auto &[buf, size] = this->columns.get(component);
+            auto &[buf, size, _] = this->columns.get(component);
             std::memcpy(dest, static_cast<char *>(buf) + row * size, size);
         }
 

@@ -5,6 +5,7 @@
 #include <tuple>
 
 using SystemRegistered = std::pair<ecs::QueryID, void (*)(ArchetypeView &)>;
+using ObserverFunc = void(*)(ecs::internal::Archetype &, ecs::internal::EntityRow row);
 
 struct Phase {
     std::vector<SystemRegistered> systems;
@@ -33,6 +34,34 @@ template<typename... Components>
 struct With {
     using with = All<Components...>;
 };
+
+struct Add {
+};
+
+template<typename... Components>
+struct Remove {
+    static void add(ecs::internal::Archetype &arch, ObserverFunc func) {
+        (arch.columns.get(reflection::type_id<Components>()).onRemove.push_back(func), ...);
+    }
+};
+
+template<typename T>
+concept IsOnRemove = requires(ecs::internal::Archetype &table, ObserverFunc func)
+{
+    { T::add(table, func) };
+};
+
+
+struct Despawn {
+};
+
+
+template<typename T>
+concept IsObserver = requires(ecs::internal::Archetype &table, ecs::internal::EntityRow row)
+{
+    { T::observe(table, row) };
+};
+
 
 template<typename Phase>
 struct On {

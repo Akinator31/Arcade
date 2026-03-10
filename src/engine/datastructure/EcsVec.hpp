@@ -23,10 +23,6 @@ namespace datastructures {
             ::free(static_cast<void *>(this->data));
         }
 
-        EcsVec(const EcsVec &) = delete;
-
-        EcsVec &operator=(const EcsVec &) = delete;
-
         EcsVec(EcsVec &&other) noexcept : data(other.data), size(other.size), capacity(other.capacity) {
             other.data = nullptr;
             other.size = 0;
@@ -54,6 +50,7 @@ namespace datastructures {
             std::memcpy(this->data + this->size, &value, sizeof(T));
             this->size += 1;
         }
+
 
         void erase(Size index) {
             uint32_t last = this->size - 1;

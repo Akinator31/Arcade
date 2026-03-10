@@ -7,7 +7,7 @@ namespace ecs {
     }
 
     World::~World() {
-        for (auto& record : this->loaded_plugins) {
+        for (auto &record: this->loaded_plugins) {
             if (record.instance) {
                 record.unload(record.instance, *this);
                 record.destroy(record.instance);
@@ -23,7 +23,7 @@ namespace ecs {
                 this->component_registry.getRecord(cid).archetypes.push_back(id);
             }
             for (QueryCache &query: this->queries) {
-                query.update(this->archetype_registry.getArchetype(id), id);
+                query.update(*this, this->archetype_registry.getArchetype(id), id);
             }
         }
 
@@ -61,12 +61,12 @@ namespace ecs {
         record.row = newRow;
     }
 
-    void World::add_id(const Entity entity, const ComponentID cid) {
+    bool World::add_id(const Entity entity, const ComponentID cid) {
         const auto &record = this->entity_registry.getRecord(entity);
         const auto &arch = this->archetype_registry.getArchetype(record.archetypeId);
 
         if (arch.has(cid))
-            return;
+            return false;
 
         ArchetypeID newArchId;
         if (arch.addEdge.has(cid)) {
@@ -75,21 +75,25 @@ namespace ecs {
             EntityType newType = arch.getType().clone();
             newType.add(cid);
 
-            std::cout << "before" << (int) newType.count << std::endl;
             newArchId =
                     this->findOrCreateArchetype(std::move(newType));
             this->archetype_registry.getArchetype(record.archetypeId)
                     .addEdge.set(cid, newArchId);
         }
         this->migrate(entity, newArchId);
+        return true;
     }
 
     void World::remove_id(const Entity entity, const ComponentID cid) {
         const auto &record = this->entity_registry.getRecord(entity);
-        const auto &arch = this->archetype_registry.getArchetype(record.archetypeId);
+        auto &arch = this->archetype_registry.getArchetype(record.archetypeId);
         if (!arch.has(cid))
             return;
 
+        const auto &onRemove = arch.columns.get(cid).onRemove;
+        for (uint i = 0; i < onRemove.size; i++) {
+            onRemove.data[i](arch, record.row);
+        }
         ArchetypeID newArchId;
         if (arch.removeEdge.has(cid)) {
             newArchId = arch.removeEdge.get(cid);
@@ -127,13 +131,13 @@ namespace ecs {
         if (cached._required.count <= 0) {
             ArchetypeID i = 0;
             for (const internal::Archetype &archetype: this->getArchetypes()) {
-                cached.update(archetype, i);
+                cached.update(*this, archetype, i);
                 i += 1;
             }
         } else {
             for (const ComponentID first = cached._required.data[0]; const ArchetypeID id: this->component_registry.
                  getArchetypes(first)) {
-                cached.update(this->archetype_registry.getArchetype(id), id);
+                cached.update(*this, this->archetype_registry.getArchetype(id), id);
             }
         }
     }
@@ -143,6 +147,13 @@ namespace ecs {
     }
 
     void World::kill(const Entity entity) {
+        if (const internal::EntityRecord &record = this->entity_registry.getRecord(entity); record.archetypeId != 0) {
+            for (internal::Archetype &arch = this->archetype_registry.getArchetype(record.archetypeId); const auto &sys:
+                 arch.onDespawn) {
+                sys(arch, record.row);
+            }
+            this->removeEntityOfArchetype(this->archetype_registry.getArchetype(record.archetypeId), record.row);
+        }
         return this->entity_registry.destroy(entity);
     }
 

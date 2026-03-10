@@ -9,9 +9,24 @@
 #include <tuple>
 #include "System.hpp"
 #include "engine/reflection/TypeCounter.hpp"
+#include "internal/EventRegistry.hpp"
 
 namespace ecs {
     class World;
+
+    namespace relation {
+        template<typename T>
+        struct RelationSource {
+            datastructures::EcsVec<ecs::Entity> entities;
+        };
+
+        template<typename T>
+        struct RelationTarget {
+            ecs::Entity target;
+
+            static void onSet(World &world, Entity entity, const RelationTarget<T> *value);
+        };
+    }
 
     struct PluginFamily {
     };
@@ -25,7 +40,19 @@ namespace ecs {
         { plugin.unload(world) };
     };
 
-    class World {
+    template<typename T>
+    concept HasOnAdd = requires(World &world, Entity entity)
+    {
+        { T::onAdd(world, entity) };
+    };
+    template<typename T>
+    concept HasOnSet = requires(World &world, Entity entity, const T *value)
+    {
+        { T::onSet(world, entity, value) };
+    };
+
+
+    class World : public internal::EventRegistry {
         struct PluginRecord {
             void *instance = nullptr;
 
@@ -101,7 +128,12 @@ namespace ecs {
         template<typename T>
         void add(const Entity entity) {
             this->component_registry.registerComponent<T>();
-            this->add_id(entity, reflection::type_id<T>());
+            const bool is_added = this->add_id(entity, reflection::type_id<T>());
+            if constexpr (HasOnAdd<T>) {
+                if (is_added) {
+                    T::onAdd(*this, entity);
+                }
+            }
         }
 
         template<typename T>
@@ -114,6 +146,34 @@ namespace ecs {
             return static_cast<T *>(this->get_id(entity, reflection::type_id<T>()));
         }
 
+        template<typename T>
+        void set(const Entity entity, const T &value) {
+            T *current = this->get<T>(entity);
+            memcpy(current, &value, sizeof(T));
+            if constexpr (HasOnSet<T>) {
+                T::onSet(*this, entity, current);
+            }
+        }
+
+        template<typename T>
+        void set(const Entity entity, const T &&value) {
+            T *current = this->get<T>(entity);
+            *current = value;
+        }
+
+        template<typename T>
+        void relate(Entity source, Entity target) {
+            this->set<relation::RelationTarget<T> >(source, {target});
+        }
+
+        template<typename Event>
+        void emit(const Entity entity, Event evt) {
+            if (const uint64_t id = this->id<Event>(entity); this->entity_event_map.contains(id)) {
+                auto *sys = static_cast<EntityEvent<Event> *>(this->entity_event_map.at(id));
+                sys->callback(*this, entity, evt);
+            }
+        }
+
         template<typename Phase>
         PhaseId phase() {
             const PhaseId id = this->phase_container.phase<Phase>();
@@ -123,7 +183,7 @@ namespace ecs {
             return id;
         }
 
-        template<IsSystem System>
+        template<typename System>
         SystemId system() {
             PhaseId phase_id = this->phase<Update>();
             Query query;
@@ -133,13 +193,42 @@ namespace ecs {
             if constexpr (HasExcluded<System>) {
                 System::without::exclude(query);
             }
+
             if constexpr (HasPhase<System>) {
                 phase_id = this->phase<typename System::phase>();
             }
             QueryID qid = this->cache(std::move(query));
-            this->phases[phase_id].systems.push_back({qid, System::iter});
 
-            return {phase_id, this->phases[phase_id].systems.size() - 1};
+            if constexpr (IsObserver<System>) {
+                this->queries.at(qid).on_add = [](World &world, const ArchetypeID id) {
+                    if constexpr (std::is_same<typename System::phase, Despawn>()) {
+                        world.archetype_registry.getArchetype(id).onDespawn.push_back(System::observe);
+                    } else if constexpr (IsOnRemove<typename System::phase>) {
+                        System::phase::add(world.archetype_registry.getArchetype(id), System::observe);
+                    } else {
+                        world.archetype_registry.getArchetype(id).onAdd.push_back(System::observe);
+                    }
+                };
+                for (const ArchetypeID &tid: this->queries.at(qid).matches) {
+                    internal::Archetype &arch = this->archetype_registry.getArchetype(tid);
+
+                    if constexpr (std::is_same<typename System::phase, Despawn>()) {
+                        arch.onDespawn.push_back(System::observe);
+                    } else if constexpr (IsOnRemove<typename System::phase>) {
+                        System::phase::add(arch, System::observe);
+                    } else {
+                        arch.onAdd.push_back(System::observe);
+                    }
+                }
+            } else if constexpr (IsSystem<System>) {
+                this->phases[phase_id].systems.push_back({qid, System::iter});
+                return {phase_id, this->phases[phase_id].systems.size() - 1};
+            } else {
+                static_assert(false, "system is not valid");
+            }
+
+
+            return {0, 0};
         }
 
         template<IsSystem System>
@@ -151,7 +240,7 @@ namespace ecs {
                     if (it->second == target_iter) {
                         it = systems.erase(it);
                     } else {
-                        ++it;
+                        it += 1;
                     }
                 }
             }
@@ -229,7 +318,7 @@ namespace ecs {
         void removeEntityOfArchetype(internal::Archetype &oldArch,
                                      internal::EntityRow row);
 
-        void add_id(Entity entity, ComponentID cid);
+        bool add_id(Entity entity, ComponentID cid);
 
         void remove_id(Entity entity, ComponentID cid);
 
@@ -241,4 +330,15 @@ namespace ecs {
 
         ArchetypeID findOrCreateArchetype(EntityType &&type);
     };
+
+    template<typename T>
+    void relation::RelationTarget<T>::onSet(
+        World &world,
+        Entity entity,
+        const RelationTarget<T> *value
+    ) {
+        world.add<RelationSource<T> >(value->target);
+        RelationSource<T> *source = world.get<RelationSource<T> >(value->target);
+        source->entities.push_back(entity);
+    }
 } // namespace ecs
