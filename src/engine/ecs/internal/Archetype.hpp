@@ -41,6 +41,8 @@ namespace ecs::internal {
         // store at ComponentID: { buffer, element_size }
 
     public:
+        World &world;
+
         datastructures::SparseSet<ArchetypeColumn, uint8_t> columns;
 
         datastructures::SparseIndices addEdge;
@@ -49,7 +51,7 @@ namespace ecs::internal {
         datastructures::EcsVec<ObserverFunc> onAdd;
         datastructures::EcsVec<ObserverFunc> onDespawn;
 
-        Archetype(EntityType &&type, const ComponentRegistry &componentRegistry);
+        Archetype(EntityType &&type, World &world);
 
         ~Archetype();
 

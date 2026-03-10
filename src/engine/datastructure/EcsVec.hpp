@@ -68,6 +68,15 @@ namespace datastructures {
             }
         }
 
+        bool has(const T &value) {
+            for (uint32_t i = 0; i < this->size; i++) {
+                if (this->data[i] == value) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         void resize(Size new_size) {
             if (new_size > this->capacity) {
                 this->capacity = new_size;

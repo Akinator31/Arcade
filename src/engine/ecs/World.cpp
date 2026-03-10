@@ -4,6 +4,8 @@ namespace ecs {
     World::World() : archetype_registry(this->component_registry) {
         [[maybe_unused]] auto archeId =
                 this->findOrCreateArchetype({});
+
+        this->relation<ChildOf>();
     }
 
     World::~World() {
@@ -16,7 +18,7 @@ namespace ecs {
     }
 
     ArchetypeID World::findOrCreateArchetype(EntityType &&type) {
-        auto [id, is_created] = this->archetype_registry.findOrCreateArchetype(std::move(type));
+        auto [id, is_created] = this->archetype_registry.findOrCreateArchetype(std::move(type), *this);
 
         if (is_created) {
             for (const ComponentID cid: this->archetype_registry.getArchetype(id).getType()) {

@@ -34,7 +34,8 @@ if (BUILD_TESTS)
                 tests/tests_plugin.cpp
                 tests/tests_observer.cpp
                 tests/tests_entity_event.cpp
-                tests/tests_component.cpp)
+                tests/tests_component.cpp
+                tests/tests_relation.cpp)
 
         target_compile_options(unittests PRIVATE -Wall -Wextra --coverage)
         target_link_options(unittests PRIVATE --coverage)

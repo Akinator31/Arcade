@@ -13,6 +13,10 @@
 #include "engine/reflection/TypeCounter.hpp"
 #include "internal/EventRegistry.hpp"
 
+
+class ChildOf {
+};
+
 namespace ecs {
     class World;
 
@@ -25,8 +29,6 @@ namespace ecs {
         template<typename T>
         struct RelationTarget {
             ecs::Entity target;
-
-            static void onSet(World &world, Entity entity, const RelationTarget<T> *value);
         };
     }
 
@@ -64,7 +66,6 @@ namespace ecs {
         };
 
         internal::EntityRegistry entity_registry;
-        internal::ComponentRegistry component_registry;
         internal::ArchetypeRegistry archetype_registry;
         std::vector<QueryCache> queries;
         PhaseContainer phase_container;
@@ -72,6 +73,8 @@ namespace ecs {
         std::vector<PluginRecord> loaded_plugins;
 
     public:
+        internal::ComponentRegistry component_registry;
+
         World();
 
         ~World();
@@ -158,6 +161,7 @@ namespace ecs {
             return static_cast<T *>(this->get_id(entity, reflection::type_id<T>()));
         }
 
+
         template<typename T>
         bool has(const Entity entity) {
             return this->archetype_registry.getArchetype(this->entity_registry.getRecord(entity).archetypeId).has(
@@ -175,13 +179,98 @@ namespace ecs {
 
         template<typename T>
         void set(const Entity entity, const T &&value) {
+            this->add<T>(entity);
             T *current = this->get<T>(entity);
             *current = value;
         }
 
+    private:
         template<typename T>
-        void relate(Entity source, Entity target) {
-            this->set<relation::RelationTarget<T> >(source, {target});
+        bool remove_target(const Entity source) {
+            using Target = relation::RelationTarget<T>;
+            using Source = relation::RelationSource<T>;
+            if (this->has<Target>(source)) {
+                Target *oldTarget = this->get<Target>(source);
+                datastructures::EcsVec<Entity> &entities = this->get<Source>(oldTarget->target)->entities;
+                entities.remove(source);
+                if (entities.size == 0) {
+                    this->remove<Source>(oldTarget->target);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        template<typename T>
+        void add_target(const Entity source, const Entity target) {
+            using Source = relation::RelationSource<T>;
+
+            this->add<Source>(target);
+            this->get<Source>(target)->entities.push_back(source);
+        }
+
+    public:
+        template<typename T>
+        void relation() {
+            using Target = relation::RelationTarget<T>;
+            using Source = relation::RelationSource<T>;
+
+            struct OnDespawnTarget : With<Target>, On<Despawn> {
+                static void observe(internal::Archetype &arch, internal::EntityRow row) {
+                    arch.world.remove_target<T>(arch.getEntities()[row]);
+                }
+            };
+
+            struct OnDespawnSource : With<Source>, On<Despawn> {
+                static void observe(internal::Archetype &arch, internal::EntityRow row) {
+                    auto *sources = static_cast<Source *>(arch.getComponent(row, reflection::type_id<Source>()));
+                    for (const Entity entity: sources->entities) {
+                        arch.world.unrelate<T>(entity);
+                    }
+                }
+            };
+
+            this->system<OnDespawnTarget>();
+            this->system<OnDespawnSource>();
+        }
+
+        template<typename T>
+        void relate(const Entity source, const Entity target) {
+            using Target = relation::RelationTarget<T>;
+
+            this->remove_target<T>(source);
+
+            this->set<Target>(source, {.target = target});
+
+            this->add_target<T>(source, target);
+        }
+
+        template<typename T>
+        bool has_target(const Entity source, const Entity target) {
+            using Target = relation::RelationTarget<T>;
+
+            if (this->has<Target>(source) && this->get<Target>(source)->target == target) {
+                return true;
+            }
+            return false;
+        }
+
+        template<typename T>
+        bool has_source(const Entity source, const Entity target) {
+            using Source = relation::RelationSource<T>;
+
+            if (this->has<Source>(source) && this->get<Source>(source)->entities.has(target)) {
+                return true;
+            }
+            return false;
+        }
+
+        template<typename T>
+        void unrelate(const Entity source) {
+            using Target = relation::RelationTarget<T>;
+
+            this->remove_target<T>(source);
+            this->remove<Target>(source);
         }
 
         template<typename Event>
@@ -348,17 +437,6 @@ namespace ecs {
 
         ArchetypeID findOrCreateArchetype(EntityType &&type);
     };
-
-    template<typename T>
-    void relation::RelationTarget<T>::onSet(
-        World &world,
-        Entity entity,
-        const RelationTarget<T> *value
-    ) {
-        world.add<RelationSource<T> >(value->target);
-        RelationSource<T> *source = world.get<RelationSource<T> >(value->target);
-        source->entities.push_back(entity);
-    }
 } // namespace ecs
 
 template<typename... Components>

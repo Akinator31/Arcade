@@ -4,6 +4,10 @@
 #include <vector>
 #include <tuple>
 
+namespace ecs {
+    class World;
+}
+
 using SystemRegistered = std::pair<ecs::QueryID, void (*)(ArchetypeView &)>;
 using ObserverFunc = void(*)(ecs::internal::Archetype &, ecs::internal::EntityRow row);
 
