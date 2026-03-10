@@ -201,6 +201,18 @@ namespace ecs {
                         world.archetype_registry.getArchetype(id).onAdd.push_back(System::observe);
                     }
                 };
+                for (const ArchetypeID &tid: this->queries.at(qid).matches) {
+                    internal::Archetype &arch = this->archetype_registry.getArchetype(tid);
+
+                    if constexpr (std::is_same<typename System::phase, Despawn>()) {
+                        arch.onDespawn.push_back(System::observe);
+                    } else if constexpr (std::is_same<typename System::phase, Remove>()) {
+                        arch.columns.get(
+                            reflection::type_id<typename System::phase>()).onRemove.push_back(System::observe);
+                    } else {
+                        arch.onAdd.push_back(System::observe);
+                    }
+                }
             } else if constexpr (IsSystem<System>) {
                 this->phases[phase_id].systems.push_back({qid, System::iter});
                 return {phase_id, this->phases[phase_id].systems.size() - 1};
