@@ -10,7 +10,8 @@ list(REMOVE_ITEM SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 add_executable(arcade ${SRC_FILES} src/main.cpp
         src/engine/ecs/Query.hpp
         src/engine/datastructure/EcsString.hpp
-        src/engine/ecs/internal/EventRegistry.hpp)
+        src/engine/ecs/internal/EventRegistry.hpp
+        src/engine/ecs/Component.hpp)
 target_include_directories(arcade PRIVATE include src)
 target_compile_options(arcade PRIVATE -Wall -Wextra -Werror)
 
@@ -32,7 +33,8 @@ if (BUILD_TESTS)
                 tests/tests_system.cpp
                 tests/tests_plugin.cpp
                 tests/tests_observer.cpp
-                tests/tests_entity_event.cpp)
+                tests/tests_entity_event.cpp
+                tests/tests_component.cpp)
 
         target_compile_options(unittests PRIVATE -Wall -Wextra --coverage)
         target_link_options(unittests PRIVATE --coverage)
