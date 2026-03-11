@@ -4,11 +4,31 @@
 #include <vector>
 #include <tuple>
 
+#include "engine/reflection/TypeCounter.hpp"
+
 namespace ecs {
     class World;
 }
 
-using SystemRegistered = std::pair<ecs::QueryID, void (*)(ArchetypeView &)>;
+struct System {
+};
+
+using SystemCounter = reflection::TypeCounter<System>;
+
+struct SystemRegistered {
+    uint32_t id = 0;
+
+    ecs::QueryID qid = 0;
+
+    void (*iter)(ArchetypeView &) = nullptr;
+
+    void *value = nullptr;
+
+    void (*run)(void *, ecs::World &) = nullptr;
+
+    bool (*condition)(ecs::World &) = nullptr;
+};
+
 using ObserverFunc = void(*)(ecs::internal::Archetype &, ecs::internal::EntityRow row);
 
 struct Phase {
@@ -37,22 +57,16 @@ concept IsSystem = requires(ArchetypeView &view)
 template<typename... Components>
 struct With {
     using with = All<Components...>;
+
+    static void add_removed_components(ecs::internal::Archetype &arch, ObserverFunc func) {
+        (arch.columns.get(reflection::type_id<Components>()).onRemove.push_back(func), ...);
+    }
 };
 
 struct Add {
 };
 
-template<typename... Components>
 struct Remove {
-    static void add(ecs::internal::Archetype &arch, ObserverFunc func) {
-        (arch.columns.get(reflection::type_id<Components>()).onRemove.push_back(func), ...);
-    }
-};
-
-template<typename T>
-concept IsOnRemove = requires(ecs::internal::Archetype &table, ObserverFunc func)
-{
-    { T::add(table, func) };
 };
 
 
@@ -77,10 +91,6 @@ struct Without {
     using without = All<Components...>;
 };
 
-template<float value>
-struct Interval {
-    static constexpr float interval = value;
-};
 
 template<typename System>
 concept HasRequired = requires(System system, Query &query)
@@ -91,10 +101,45 @@ concept HasRequired = requires(System system, Query &query)
 };
 
 template<typename System>
+concept Runnable = requires(ecs::World &world, System *sys)
+{
+    {
+        System::run(sys, world)
+    };
+};
+
+template<typename System>
+concept IsSystemCondition = requires(ecs::World &world)
+{
+    { System::condition(world) } -> std::same_as<bool>;
+};
+
+template<IsSystemCondition ...Condition>
+struct Conditions {
+    static bool condition(ecs::World &world) {
+        return (Condition::condition(world) && ...);
+    }
+};
+
+template<class System>
+constexpr auto getSystemCondition() {
+    if constexpr (IsSystemCondition<System>)
+        return System::condition;
+    else
+        return nullptr;
+}
+
+
+template<typename... Components>
+struct SystemParams : Components... {
+};
+
+template<typename System>
 concept HasPhase = requires()
 {
     typename System::phase;
 };
+
 
 template<typename System>
 concept HasExcluded = requires(System system, Query &query)
@@ -103,6 +148,19 @@ concept HasExcluded = requires(System system, Query &query)
         System::without::exclude(query)
     };
 };
+
+#define ITER(view) static void iter(ArchetypeView &view)
+#define RUN(type, self, world) static void run(type *self, ecs::World &world)
+#define OBSERVE(table, row) static void observe(ecs::internal::Archetype &table, ecs::internal::EntityRow row)
+#define SYSTEM(name, ...) struct name : __VA_ARGS__
+
+#if defined(_MSC_VER)
+#define RESTRICT __restrict
+#elif defined(__GNUC__) || defined(__clang__)
+#define RESTRICT __restrict__
+#else
+#define RESTRICT
+#endif
 
 struct PreStartup {
 };

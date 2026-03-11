@@ -46,6 +46,95 @@ Test(system, basic_execution) {
     cr_assert_float_eq(world.get<Position>(e1)->y, 2.0f, 0.001f);
 }
 
+Test(system, empty) {
+    ecs::World world;
+
+    static int count = 0;
+
+    struct Empty {
+        static void run(Empty *, ecs::World &) {
+            count += 1;
+        }
+    };
+
+    world.system<Empty>();
+
+    world.progress();
+
+    cr_assert_eq(count, 1);
+}
+
+struct AllowCondition {
+    static bool condition(ecs::World &) {
+        return true;
+    }
+};
+
+struct DisallowCondition {
+    static bool condition(ecs::World &) {
+        return false;
+    }
+};
+
+Test(system, condition) {
+    ecs::World world;
+
+    static int count = 0;
+
+
+    struct Allowed : AllowCondition {
+        static void run(Allowed *, ecs::World &) {
+            count += 1;
+        }
+    };
+
+    struct Disallowed : DisallowCondition {
+        static void run(Disallowed *, ecs::World &) {
+            count += 1;
+        }
+    };
+    world.progress();
+    world.system<Allowed>();
+    cr_assert_eq(count, 0);
+    world.progress();
+    cr_assert_eq(count, 1);
+    world.remove<Allowed>();
+    world.system<Disallowed>();
+    world.progress();
+    cr_assert_eq(count, 1);
+    world.remove<Disallowed>();
+    cr_assert_eq(count, 1);
+}
+
+Test(system, multiple_condition) {
+    ecs::World world;
+
+    static int count = 0;
+
+    struct TwoAllow : Conditions<AllowCondition, AllowCondition> {
+        static void run(TwoAllow *, ecs::World &) {
+            count += 1;
+        }
+    };
+
+    world.system<TwoAllow>();
+
+    world.progress();
+    cr_assert_eq(count, 1);
+
+    world.remove<TwoAllow>();
+    struct AllowDisallow : Conditions<AllowCondition, DisallowCondition> {
+        static void run(AllowDisallow *, ecs::World &) {
+            count += 1;
+        }
+    };
+
+    world.system<AllowDisallow>();
+
+    world.progress();
+    cr_assert_eq(count, 1);
+}
+
 Test(system, exclude_component) {
     struct PlayerOnlySystem : With<Position>, Without<Enemy> {
         static void iter(ArchetypeView &view) {
@@ -165,4 +254,27 @@ Test(system, remove_system) {
 
     world.progress();
     cr_assert_float_eq(world.get<Position>(e)->x, 5.0f, 0.001f);
+}
+
+
+Test(system, interval) {
+    ecs::World world;
+    static int count = 0;
+
+    struct Sys : Interval<1000> {
+        static void run(Sys *, ecs::World &) {
+            count += 1;
+        }
+    };
+
+    world.system<Sys>();
+    world.deltaTime = 0.6;
+    world.progress();
+    cr_assert_eq(count, 0);
+    world.progress();
+    cr_assert_eq(count, 1);
+    world.progress();
+    cr_assert_eq(count, 1);
+    world.progress();
+    cr_assert_eq(count, 2);
 }

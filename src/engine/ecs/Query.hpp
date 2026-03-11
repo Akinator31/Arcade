@@ -101,6 +101,11 @@ public:
         }
         return nullptr;
     }
+
+    template<typename T>
+    [[nodiscard]] bool has() const {
+        return archetype.has(reflection::type_id<T>());
+    }
 };
 
 

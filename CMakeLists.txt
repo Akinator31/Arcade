@@ -11,7 +11,11 @@ add_executable(arcade ${SRC_FILES} src/main.cpp
         src/engine/ecs/Query.hpp
         src/engine/datastructure/EcsString.hpp
         src/engine/ecs/internal/EventRegistry.hpp
-        src/engine/ecs/Component.hpp)
+        src/engine/ecs/Component.hpp
+        src/engine/ecs/Timer.hpp
+        src/engine/Graphics.hpp
+        src/engine/ecs/State.hpp
+)
 target_include_directories(arcade PRIVATE include src)
 target_compile_options(arcade PRIVATE -Wall -Wextra -Werror)
 

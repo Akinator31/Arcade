@@ -5,14 +5,14 @@ namespace ecs {
         [[maybe_unused]] auto archeId =
                 this->findOrCreateArchetype({});
 
-        this->relation<ChildOf>();
+        this->relation<Hierarchy>();
     }
 
     World::~World() {
-        for (auto &record: this->loaded_plugins) {
-            if (record.instance) {
-                record.unload(record.instance, *this);
-                record.destroy(record.instance);
+        for (auto &[instance, unload, destroy]: this->loaded_plugins) {
+            if (instance) {
+                unload(instance, *this);
+                destroy(instance);
             }
         }
     }
@@ -144,8 +144,8 @@ namespace ecs {
         }
     }
 
-    Entity World::entity() {
-        return this->entity_registry.create();
+    EntityRef World::entity() {
+        return EntityRef(*this, this->entity_registry.create());
     }
 
     void World::kill(const Entity entity) {
@@ -165,8 +165,14 @@ namespace ecs {
 
     void World::runSystem(SystemId sys) {
         auto [phase, index] = sys;
-        auto [qid, callback] = this->phases[phase].systems.at(index);
-        this->read(qid).iter(callback);
+        auto [id, qid, callback, value, run, _] = this->phases[phase].systems.at(index);
+
+        if (callback) {
+            this->read(qid).iter(callback);
+        }
+        if (run) {
+            run(value, *this);
+        }
     }
 
     QueryID World::cache(Query &&q) {
@@ -191,8 +197,16 @@ namespace ecs {
     }
 
     void World::runAll(const PhaseId pid) {
-        for (auto [qid, sys]: this->getSystems(pid)) {
-            this->read(qid).iter(sys);
+        for (auto [_, qid, callback, value, run, condition]: this->getSystems(pid)) {
+            if (condition && !condition(*this)) {
+                continue;
+            }
+            if (callback) {
+                this->read(qid).iter(callback);
+            }
+            if (run) {
+                run(value, *this);
+            }
         }
     }
 
