@@ -73,7 +73,6 @@ namespace ecs {
         };
 
         internal::EntityRegistry entity_registry;
-        internal::ArchetypeRegistry archetype_registry;
         std::vector<QueryCache> queries;
         PhaseContainer phase_container;
         std::vector<Phase> phases;
@@ -81,6 +80,8 @@ namespace ecs {
 
     public:
         internal::ComponentRegistry component_registry;
+        internal::ArchetypeRegistry archetype_registry;
+
         float deltaTime{};
 
         World();

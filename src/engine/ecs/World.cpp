@@ -1,7 +1,7 @@
 #include "World.hpp"
 
 namespace ecs {
-    World::World() : archetype_registry(this->component_registry) {
+    World::World() : component_registry(), archetype_registry(this->component_registry) {
         [[maybe_unused]] auto archeId =
                 this->findOrCreateArchetype({});
 
