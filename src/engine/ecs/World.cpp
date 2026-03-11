@@ -144,7 +144,11 @@ namespace ecs {
         }
     }
 
-    EntityRef World::entity() {
+    Entity World::entity() {
+        return this->entity_registry.create();
+    }
+
+    EntityRef World::create() {
         return EntityRef(*this, this->entity_registry.create());
     }
 
@@ -188,7 +192,7 @@ namespace ecs {
         return this->queries.at(qid).matches;
     }
 
-    World::TablesReader World::read(const QueryID qid) {
+    TablesReader World::read(const QueryID qid) {
         return {this->queries.at(qid).matches, *this};
     }
 
@@ -222,5 +226,27 @@ namespace ecs {
         this->runAll(this->phase<PreStartup>());
         this->runAll(this->phase<Startup>());
         this->runAll(this->phase<PreUpdate>());
+    }
+
+    bool World::add_id_batched(const Entity entity, const ComponentID *cid, const uint32_t count) {
+        const auto &record = this->entity_registry.getRecord(entity);
+        const auto &arch = this->archetype_registry.getArchetype(record.archetypeId);
+
+
+        EntityType newType = arch.getType().clone();
+        for (uint32_t i = 0; i < count; i++) {
+            if (!arch.has(cid[i])) {
+                newType.add(cid[i]);
+            }
+        }
+
+        if (newType.count == arch.getType().count) {
+            return false;
+        }
+
+        const ArchetypeID newArchId = this->findOrCreateArchetype(std::move(newType));
+        this->migrate(entity, newArchId);
+
+        return true;
     }
 } // namespace ecs
