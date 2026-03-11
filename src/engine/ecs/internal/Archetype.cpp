@@ -80,6 +80,10 @@ namespace ecs::internal {
     const Entity *Archetype::getEntities() const { return this->entities.data; }
 
     bool Archetype::has(const ComponentID component) const {
+        return this->type.has(component);
+    }
+
+    bool Archetype::stores(const ComponentID component) const {
         return this->columns.has(component);
     }
 } // namespace ecs::internal

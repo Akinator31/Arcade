@@ -87,6 +87,7 @@ namespace ecs::internal {
         [[nodiscard]] void *getColumn(ComponentID component) const;
 
         [[nodiscard]] bool has(ComponentID component) const;
+        [[nodiscard]] bool stores(ComponentID component) const;
 
         [[nodiscard]] std::size_t count() const;
 

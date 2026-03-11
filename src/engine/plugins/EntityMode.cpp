@@ -39,7 +39,7 @@ void CliPlugin::init_entity_commands() {
 
         const auto &record = world.component_registry.getRecord(cid);
         if (!record.def) {
-            output << "Component is not reflectable\n";
+            output << "not reflectable\n";
             return;
         }
 
@@ -74,6 +74,40 @@ void CliPlugin::init_entity_commands() {
 
         void *ptr = world.get_id(session.inspected_entity, cid);
         record.def->from_string(ptr, field_name.c_str(), value);
+    };
+
+    entity_commands["add"] = [](CliPlugin &, const CliSession &session, ecs::World &world, Scanner &scanner,
+                                std::ostream &output) {
+        scanner.skip_whitespace();
+        const std::string name = scanner.take_identifier();
+        if (name.empty()) {
+            return;
+        }
+
+        const auto it = world.component_registry.name_to_id.find(name);
+        if (it == world.component_registry.name_to_id.end()) {
+            output << "Component not found\n";
+            return;
+        }
+
+        world.add_id(session.inspected_entity, it->second);
+    };
+
+    entity_commands["remove"] = [](CliPlugin &, const CliSession &session, ecs::World &world, Scanner &scanner,
+                                   std::ostream &output) {
+        scanner.skip_whitespace();
+        const std::string name = scanner.take_identifier();
+        if (name.empty()) {
+            return;
+        }
+
+        const auto it = world.component_registry.name_to_id.find(name);
+        if (it == world.component_registry.name_to_id.end()) {
+            output << "Component not found\n";
+            return;
+        }
+
+        world.remove_id(session.inspected_entity, it->second);
     };
 
     entity_commands["exit"] = [](CliPlugin &, CliSession &session, ecs::World &, Scanner &, std::ostream &) {

@@ -18,6 +18,8 @@ struct Position {
     )
 };
 
+struct Enemy;
+
 void redirect_all_stdout() {
     cr_redirect_stdout();
     cr_redirect_stderr();
@@ -99,6 +101,43 @@ Test(cli, normal_entities, .init = redirect_all_stdout) {
 
     fflush(stdout);
     cr_assert_stdout_eq_str("Player1\n");
+}
+
+Test(cli, normal_create, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    cli.progress(world, "create Player1");
+    cli.progress(world, "entities");
+
+    fflush(stdout);
+    cr_assert_stdout_eq_str("Player1\n");
+}
+
+Test(cli, normal_create_then_inspect, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    cli.progress(world, "create Player1");
+    cli.progress(world, "inspect Player1");
+
+    cr_assert(cli.session.state == CliState::Entity);
+}
+
+Test(cli, normal_delete, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    const ecs::Entity e1 = world.entity();
+    world.add<Name>(e1);
+    world.get<Name>(e1)->value = "Player1";
+
+    cli.progress(world, "delete Player1");
+    cli.progress(world, "entities");
+
+    fflush(stdout);
+    cr_assert_stdout_eq_str("");
+    cr_assert(!world.isAlive(e1));
 }
 
 Test(cli, normal_inspect_success, .init = redirect_all_stdout) {
@@ -211,6 +250,100 @@ Test(cli, entity_set, .init = redirect_all_stdout) {
     cr_assert_eq(world.get<Position>(e1)->x, 42.5f);
     cr_assert_eq(world.get<Position>(e1)->y, -15.0f);
     cr_assert_str_eq(world.get<Name>(e1)->value, "Hero");
+}
+
+Test(cli, entity_add, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    world.component_registry.registerComponent<Position>();
+    world.component_registry.registerComponent<Name>();
+
+    const ecs::Entity e1 = world.entity();
+    world.add<Name>(e1);
+    world.get<Name>(e1)->value = "Player1";
+
+    cli.session.state = CliState::Normal;
+    cli.progress(world, "inspect Player1");
+    cli.progress(world, "add Position");
+
+    cr_assert_not_null(world.get<Position>(e1));
+}
+
+Test(cli, entity_add_missing_component, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    world.component_registry.registerComponent<Name>();
+
+    const ecs::Entity e1 = world.entity();
+    world.add<Name>(e1);
+    world.get<Name>(e1)->value = "Player1";
+
+    cli.session.state = CliState::Normal;
+    cli.progress(world, "inspect Player1");
+    cli.progress(world, "add Position");
+
+    fflush(stdout);
+    cr_assert_stdout_eq_str("Component not found\n");
+}
+
+Test(cli, entity_remove, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    world.component_registry.registerComponent<Position>();
+    world.component_registry.registerComponent<Name>();
+
+    const ecs::Entity e1 = world.entity();
+    world.add<Name>(e1);
+    world.get<Name>(e1)->value = "Player1";
+    world.add<Position>(e1);
+
+    cli.session.state = CliState::Normal;
+    cli.progress(world, "inspect Player1");
+    cli.progress(world, "remove Position");
+
+    cr_assert_null(world.get<Position>(e1));
+}
+
+Test(cli, entity_remove_missing_component, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    world.component_registry.registerComponent<Name>();
+
+    const ecs::Entity e1 = world.entity();
+    world.add<Name>(e1);
+    world.get<Name>(e1)->value = "Player1";
+
+    cli.session.state = CliState::Normal;
+    cli.progress(world, "inspect Player1");
+    cli.progress(world, "remove Position");
+
+    fflush(stdout);
+    cr_assert_stdout_eq_str("Component not found\n");
+}
+
+Test(cli, entity_remove_incomplete_tag, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    world.component_registry.registerComponent<Name>();
+    world.component_registry.registerComponent<Enemy>();
+
+    const ecs::Entity e1 = world.entity();
+    world.add<Name>(e1);
+    world.get<Name>(e1)->value = "Player1";
+    world.add<Enemy>(e1);
+
+    cr_assert(world.has<Enemy>(e1));
+
+    cli.session.state = CliState::Normal;
+    cli.progress(world, "inspect Player1");
+    cli.progress(world, "remove Enemy");
+
+    cr_assert(!world.has<Enemy>(e1));
 }
 
 Test(cli, entity_print_name, .init = redirect_all_stdout) {

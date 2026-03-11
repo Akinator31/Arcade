@@ -78,6 +78,13 @@ std::string CliPlugin::execute(ecs::World &world, const std::string &input) {
     return execute(world, input, session);
 }
 
+ecs::Entity CliPlugin::create_named_entity(ecs::World &world, const std::string &name) {
+    const ecs::Entity entity = world.entity();
+    world.add<Name>(entity);
+    world.get<Name>(entity)->value = store_name(name);
+    return entity;
+}
+
 void CliPlugin::tick(ecs::World &world) {
     if (mode == CliMode::Server) {
         tick_server(world);
@@ -137,6 +144,11 @@ void CliPlugin::remove_closed_sessions() {
                    }
                ) == server.get_clients().end();
     });
+}
+
+const char *CliPlugin::store_name(const std::string &name) {
+    stored_names.push_back(name);
+    return stored_names.back().c_str();
 }
 
 void CliRuntimeSystem::run(CliRuntimeSystem *, ecs::World &world) {

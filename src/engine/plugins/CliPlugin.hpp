@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <iostream>
 #include <ostream>
@@ -45,6 +46,7 @@ struct CliPlugin {
     std::unordered_map<int, CliSession> client_sessions;
     std::unordered_map<std::string, CommandHandler> normal_commands;
     std::unordered_map<std::string, CommandHandler> entity_commands;
+    std::deque<std::string> stored_names;
     network::TcpServer server;
 
     void load(ecs::World &world);
@@ -69,6 +71,7 @@ struct CliPlugin {
     [[nodiscard]] std::string execute(ecs::World &world, const std::string &input, CliSession &current_session);
     [[nodiscard]] std::string execute(ecs::World &world, const std::string &input);
     void tick(ecs::World &world);
+    ecs::Entity create_named_entity(ecs::World &world, const std::string &name);
 
 private:
     void start_server();
@@ -77,4 +80,5 @@ private:
     void send_prompts_to_new_clients();
     void handle_client_messages(ecs::World &world);
     void remove_closed_sessions();
+    const char *store_name(const std::string &name);
 };

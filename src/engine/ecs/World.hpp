@@ -360,6 +360,8 @@ namespace ecs {
 
         bool add_id(Entity entity, ComponentID cid);
 
+        void remove_id(Entity entity, ComponentID cid);
+
         bool add_id_batched(Entity entity, const ComponentID *cid, uint count);
 
         template<typename... Components>
@@ -410,8 +412,6 @@ namespace ecs {
         void removeEntityOfArchetype(internal::Archetype &oldArch,
                                      internal::EntityRow row);
 
-
-        void remove_id(Entity entity, ComponentID cid);
 
         void migrate(Entity, ArchetypeID newArchId);
 
@@ -468,6 +468,12 @@ namespace ecs {
     template<typename... Components>
     EntityRef &&EntityRef::set(Components... value) {
         (this->world.set<Components>(this->entity(), value), ...);
+        return std::move(*this);
+    }
+
+    template<typename Event, typename Func>
+    EntityRef &&EntityRef::listen(Func &&func) {
+        this->world.listen<Event>(this->entity(), func);
         return std::move(*this);
     }
 }

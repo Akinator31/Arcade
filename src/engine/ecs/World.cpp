@@ -51,7 +51,7 @@ namespace ecs {
 
         if (const auto &oldType = oldArch.getType(); oldType.count > 0) {
             for (const ComponentID cid: oldType) {
-                if (newArch.has(cid)) {
+                if (oldArch.stores(cid) && newArch.stores(cid)) {
                     oldArch.copyTo(record.row, cid, newArch.getComponent(newRow, cid));
                 }
             }
@@ -92,9 +92,11 @@ namespace ecs {
         if (!arch.has(cid))
             return;
 
-        const auto &onRemove = arch.columns.get(cid).onRemove;
-        for (uint i = 0; i < onRemove.size; i++) {
-            onRemove.data[i](arch, record.row);
+        if (arch.stores(cid)) {
+            const auto &onRemove = arch.columns.get(cid).onRemove;
+            for (uint i = 0; i < onRemove.size; i++) {
+                onRemove.data[i](arch, record.row);
+            }
         }
         ArchetypeID newArchId;
         if (arch.removeEdge.has(cid)) {
@@ -116,6 +118,9 @@ namespace ecs {
         const auto &record = this->entity_registry.getRecord(entity);
         const auto &arch = this->archetype_registry.getArchetype(record.archetypeId);
         if (!arch.has(cid)) {
+            return nullptr;
+        }
+        if (!arch.stores(cid)) {
             return nullptr;
         }
         return arch.getComponent(record.row, cid);
