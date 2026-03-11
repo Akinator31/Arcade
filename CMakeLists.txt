@@ -9,7 +9,7 @@ list(REMOVE_ITEM SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 
 add_executable(arcade ${SRC_FILES} src/main.cpp
         src/engine/ecs/Query.hpp
-        src/engine/datastructure/EcsString.hpp
+        src/engine/datastructures/EcsString.hpp
         src/engine/ecs/internal/EventRegistry.hpp
         src/engine/ecs/Component.hpp
         src/engine/ecs/Timer.hpp

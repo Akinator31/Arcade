@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../datastructure/IndiceAlocator.hpp"
+#include "../../datastructures/IndiceAlocator.hpp"
 #include "../type.hpp"
 
 namespace ecs::internal {

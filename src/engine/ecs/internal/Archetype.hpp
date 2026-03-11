@@ -1,7 +1,7 @@
 #pragma once
 #include "ComponentRegistry.hpp"
-#include "engine/datastructure/SparseIndices.hpp"
-#include "engine/datastructure/SparseSet.hpp"
+#include "engine/datastructures/SparseIndices.hpp"
+#include "engine/datastructures/SparseSet.hpp"
 #include "engine/ecs/type.hpp"
 
 #include <optional>

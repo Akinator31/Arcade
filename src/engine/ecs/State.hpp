@@ -1,5 +1,5 @@
 #pragma once
-#include "engine/datastructure/SparseSet.hpp"
+#include "engine/datastructures/SparseSet.hpp"
 #include "engine/reflection/TypeCounter.hpp"
 
 struct State;

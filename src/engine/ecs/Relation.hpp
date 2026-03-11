@@ -2,7 +2,7 @@
 
 #include <utility>
 #include "engine/ecs/type.hpp"
-#include "engine/datastructure/EcsVec.hpp"
+#include "engine/datastructures/EcsVec.hpp"
 
 namespace ecs {
     class World;
