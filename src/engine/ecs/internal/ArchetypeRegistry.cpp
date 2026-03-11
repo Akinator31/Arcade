@@ -1,5 +1,6 @@
 #include "ArchetypeRegistry.hpp"
 #include "Archetype.hpp"
+#include "engine/ecs/World.hpp"
 
 size_t EntityTypeHasher::operator()(const ecs::EntityType &e) const noexcept {
     constexpr uint64_t offset = 14695981039346656037ull;
@@ -24,14 +25,14 @@ namespace ecs::internal {
     }
 
     // return archetype id and if just created
-    std::pair<ArchetypeID, bool> ArchetypeRegistry::findOrCreateArchetype(EntityType &&type) {
+    std::pair<ArchetypeID, bool> ArchetypeRegistry::findOrCreateArchetype(EntityType &&type, World &world) {
         if (const auto it = this->archetypes_map.find(type);
             it != this->archetypes_map.end()) {
             return {it->second, false};
         }
         auto id = static_cast<ArchetypeID>(this->archetypes.size());
         this->archetypes_map.emplace(type.clone(), id);
-        this->archetypes.emplace_back(std::move(type), this->componentRegistry);
+        this->archetypes.emplace_back(std::move(type), world);
         return {id, true};
     }
 

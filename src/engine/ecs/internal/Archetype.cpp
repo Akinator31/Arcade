@@ -1,11 +1,13 @@
 #include "Archetype.hpp"
 
+#include "engine/ecs/World.hpp"
+
 namespace ecs::internal {
     Archetype::Archetype(EntityType &&type,
-                         const ComponentRegistry &componentRegistry)
-        : type(std::move(type)) {
+                         World &world)
+        : type(std::move(type)), world(world) {
         for (const auto &component: this->type) {
-            const std::size_t size = componentRegistry.getSize(component);
+            const std::size_t size = world.component_registry.getSize(component);
             if (size == 0)
                 continue;
 

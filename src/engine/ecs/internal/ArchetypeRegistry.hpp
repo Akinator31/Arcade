@@ -18,7 +18,7 @@ namespace ecs::internal {
 
         explicit ArchetypeRegistry(ComponentRegistry &componentRegistry);
 
-        [[nodiscard]] std::pair<ArchetypeID, bool> findOrCreateArchetype(EntityType &&type);
+        [[nodiscard]] std::pair<ArchetypeID, bool> findOrCreateArchetype(EntityType &&type, World &world);
 
         Archetype &getArchetype(ArchetypeID archetypeId);
     };

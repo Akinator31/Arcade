@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 #include "../type.hpp"
-#include "engine/datastructure/SparseSet.hpp"
+#include "engine/datastructures/SparseSet.hpp"
 #include "engine/reflection/TypeCounter.hpp"
 
 struct EventCounter;

@@ -20,7 +20,7 @@ Test(observer, base) {
             count += 1;
         };
     };
-    struct OnRemovePlayer : With<Player>, On<Remove<Player> > {
+    struct OnRemovePlayer : With<Player>, On<Remove> {
         static void observe(ecs::internal::Archetype &, ecs::internal::EntityRow) {
             count -= 1;
         };
@@ -61,7 +61,7 @@ Test(observer, already_created_table) {
             count += 1;
         };
     };
-    struct OnRemovePlayer : With<Player>, On<Remove<Player> > {
+    struct OnRemovePlayer : With<Player>, On<Remove> {
         static void observe(ecs::internal::Archetype &, ecs::internal::EntityRow) {
             count -= 1;
         };

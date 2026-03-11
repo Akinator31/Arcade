@@ -1,22 +1,24 @@
 #include "World.hpp"
 
 namespace ecs {
-    World::World() : archetype_registry(this->component_registry) {
+    World::World() : component_registry(), archetype_registry(this->component_registry) {
         [[maybe_unused]] auto archeId =
                 this->findOrCreateArchetype({});
+
+        this->relation<Hierarchy>();
     }
 
     World::~World() {
-        for (auto &record: this->loaded_plugins) {
-            if (record.instance) {
-                record.unload(record.instance, *this);
-                record.destroy(record.instance);
+        for (auto &[instance, unload, destroy]: this->loaded_plugins) {
+            if (instance) {
+                unload(instance, *this);
+                destroy(instance);
             }
         }
     }
 
     ArchetypeID World::findOrCreateArchetype(EntityType &&type) {
-        auto [id, is_created] = this->archetype_registry.findOrCreateArchetype(std::move(type));
+        auto [id, is_created] = this->archetype_registry.findOrCreateArchetype(std::move(type), *this);
 
         if (is_created) {
             for (const ComponentID cid: this->archetype_registry.getArchetype(id).getType()) {
@@ -142,8 +144,8 @@ namespace ecs {
         }
     }
 
-    Entity World::entity() {
-        return this->entity_registry.create();
+    EntityRef World::entity() {
+        return EntityRef(*this, this->entity_registry.create());
     }
 
     void World::kill(const Entity entity) {
@@ -163,8 +165,14 @@ namespace ecs {
 
     void World::runSystem(SystemId sys) {
         auto [phase, index] = sys;
-        auto [qid, callback] = this->phases[phase].systems.at(index);
-        this->read(qid).iter(callback);
+        auto [id, qid, callback, value, run, _] = this->phases[phase].systems.at(index);
+
+        if (callback) {
+            this->read(qid).iter(callback);
+        }
+        if (run) {
+            run(value, *this);
+        }
     }
 
     QueryID World::cache(Query &&q) {
@@ -189,8 +197,16 @@ namespace ecs {
     }
 
     void World::runAll(const PhaseId pid) {
-        for (auto [qid, sys]: this->getSystems(pid)) {
-            this->read(qid).iter(sys);
+        for (auto [_, qid, callback, value, run, condition]: this->getSystems(pid)) {
+            if (condition && !condition(*this)) {
+                continue;
+            }
+            if (callback) {
+                this->read(qid).iter(callback);
+            }
+            if (run) {
+                run(value, *this);
+            }
         }
     }
 
