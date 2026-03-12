@@ -26,6 +26,8 @@ struct SystemRegistered {
 
     void (*run)(void *, ecs::World &) = nullptr;
 
+    void (*destroy)(void *) = nullptr;
+
     bool (*condition)(ecs::World &) = nullptr;
 };
 

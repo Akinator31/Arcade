@@ -379,12 +379,14 @@ Test(cli, empty_command) {
 Test(cli, prompt_changes_with_state) {
     CliPlugin cli;
 
-    cr_assert_str_eq(cli.prompt().c_str(), "> ");
+    const std::string normal_prompt = cli.prompt();
+    cr_assert_str_eq(normal_prompt.c_str(), "> ");
 
     cli.session.state = CliState::Entity;
     cli.session.inspected_entity = {42, 7};
 
-    cr_assert_str_eq(cli.prompt().c_str(), "entity(42, 7)> ");
+    const std::string entity_prompt = cli.prompt();
+    cr_assert_str_eq(entity_prompt.c_str(), "entity(42, 7)> ");
 }
 
 Test(cli, server_execute_returns_output_and_prompt) {

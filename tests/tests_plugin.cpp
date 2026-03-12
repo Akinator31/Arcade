@@ -3,6 +3,7 @@
 
 struct TestPlugin {
     bool is_loaded = false;
+    bool *unloaded_flag = nullptr;
 
     void load([[maybe_unused]] ecs::World &world) {
         is_loaded = true;
@@ -10,11 +11,15 @@ struct TestPlugin {
 
     void unload([[maybe_unused]] ecs::World &world) {
         is_loaded = false;
+        if (unloaded_flag) {
+            *unloaded_flag = true;
+        }
     }
 };
 
 Test(plugin, lifecycle) {
     ecs::World world;
+    bool unloaded = false;
 
     cr_assert_not(world.hasPlugin<TestPlugin>());
 
@@ -24,10 +29,11 @@ Test(plugin, lifecycle) {
     auto *plugin = world.getPlugin<TestPlugin>();
     cr_assert_not_null(plugin);
     cr_assert(plugin->is_loaded);
+    plugin->unloaded_flag = &unloaded;
 
     world.removePlugin<TestPlugin>();
     cr_assert_not(world.hasPlugin<TestPlugin>());
-    cr_assert_not(plugin->is_loaded);
+    cr_assert(unloaded);
 }
 
 struct StatefulPlugin {

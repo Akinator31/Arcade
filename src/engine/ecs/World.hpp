@@ -235,7 +235,7 @@ namespace ecs {
         template<typename Event>
         void emit(const Entity entity, Event evt) {
             if (const uint64_t id = this->id<Event>(entity); this->entity_event_map.contains(id)) {
-                auto *sys = static_cast<EntityEvent<Event> *>(this->entity_event_map.at(id));
+                auto *sys = static_cast<EntityEvent<Event> *>(this->entity_event_map.at(id).instance);
                 sys->callback(*this, entity, evt);
             }
         }
@@ -270,6 +270,7 @@ namespace ecs {
                 SystemCounter::id<System>(),
                 this->cache(std::move(query)),
                 nullptr, new System(), nullptr,
+                [](void *ptr) { delete static_cast<System *>(ptr); },
                 getSystemCondition<System>()
             };
 
@@ -290,6 +291,9 @@ namespace ecs {
                 for (const ArchetypeID tid: this->queries.at(config.qid).matches)
                     attach(*this, tid);
 
+                if (config.destroy) {
+                    config.destroy(config.value);
+                }
                 return {0, 0};
             }
 
@@ -310,6 +314,9 @@ namespace ecs {
                 auto it = systems.begin();
                 while (it != systems.end()) {
                     if (it->id == SystemCounter::id<System>()) {
+                        if (it->destroy) {
+                            it->destroy(it->value);
+                        }
                         it = systems.erase(it);
                     } else {
                         it += 1;

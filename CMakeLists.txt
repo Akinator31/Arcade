@@ -4,6 +4,22 @@ project(arcade LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(ENABLE_SANITIZERS "Build with sanitizers" OFF)
+
+set(ARCADE_COMMON_COMPILE_OPTIONS -Wall -Wextra -Werror)
+set(ARCADE_SANITIZER_COMPILE_OPTIONS)
+set(ARCADE_SANITIZER_LINK_OPTIONS)
+
+if (ENABLE_SANITIZERS)
+    list(APPEND ARCADE_SANITIZER_COMPILE_OPTIONS
+            -fsanitize=address,undefined
+            -fno-omit-frame-pointer
+            -g3
+            -O0
+    )
+    list(APPEND ARCADE_SANITIZER_LINK_OPTIONS -fsanitize=address,undefined)
+endif ()
+
 file(GLOB_RECURSE SRC_FILES "src/*.cpp")
 list(REMOVE_ITEM SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 
@@ -24,7 +40,8 @@ add_executable(arcade ${SRC_FILES} src/main.cpp
         src/engine/plugins/CliPlugin.cpp
 )
 target_include_directories(arcade PRIVATE include src)
-target_compile_options(arcade PRIVATE -Wall -Wextra -Werror)
+target_compile_options(arcade PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+target_link_options(arcade PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
 
 # TEST CRITERION
 
@@ -52,8 +69,12 @@ if (BUILD_TESTS)
                 tests/tests_cli.cpp
                 tests/tests_json.cpp)
 
-        target_compile_options(unittests PRIVATE -Wall -Wextra --coverage)
-        target_link_options(unittests PRIVATE --coverage)
+        target_compile_options(unittests PRIVATE
+                ${ARCADE_COMMON_COMPILE_OPTIONS}
+                --coverage
+                ${ARCADE_SANITIZER_COMPILE_OPTIONS}
+        )
+        target_link_options(unittests PRIVATE --coverage ${ARCADE_SANITIZER_LINK_OPTIONS})
         target_include_directories(unittests PRIVATE include src)
         target_link_libraries(unittests ${CRITERION_LIB})
 

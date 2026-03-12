@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ranges>
 #include <unordered_map>
 
 #include "../type.hpp"
@@ -21,7 +22,20 @@ namespace ecs {
 
 namespace ecs::internal {
     struct EventRegistry {
-        std::unordered_map<uint64_t, void *> entity_event_map;
+        struct EventRecord {
+            void *instance = nullptr;
+            void (*destroy)(void *) = nullptr;
+        };
+
+        std::unordered_map<uint64_t, EventRecord> entity_event_map;
+
+        virtual ~EventRegistry() {
+            for (auto &[instance, destroy]: entity_event_map | std::views::values) {
+                if (destroy) {
+                    destroy(instance);
+                }
+            }
+        }
 
         template<typename Event>
         static uint64_t id(const Entity entity) {
@@ -32,12 +46,18 @@ namespace ecs::internal {
         template<typename Event, typename Func>
             requires std::invocable<Func, World &, Entity, const Event>
         void listen(const Entity entity, Func &&func) {
-            auto *evt = new EntityEvent<Event>();
             const uint64_t id = this->id<Event>(entity);
-
+            auto *evt = new EntityEvent<Event>();
             evt->callback = func;
-
-            this->entity_event_map[id] = static_cast<void *>(evt);
+            if (const auto it = this->entity_event_map.find(id); it != this->entity_event_map.end()) {
+                if (it->second.destroy) {
+                    it->second.destroy(it->second.instance);
+                }
+            }
+            this->entity_event_map[id] = {
+                static_cast<void *>(evt),
+                [](void *ptr) { delete static_cast<EntityEvent<Event> *>(ptr); }
+            };
         }
     };
 } // namespace ecs::internal

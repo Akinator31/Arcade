@@ -159,10 +159,12 @@ public:
 
 #define rayflect(name, ...) \
 static StructDef *def() { \
-    static StructDef *name = nullptr;\
-    if (!name) {\
-        name = new StructDef();\
+    static StructDef name##_storage{};\
+    StructDef *name = &name##_storage;\
+    static bool initialized = false;\
+    if (!initialized) {\
         __VA_ARGS__\
+        initialized = true;\
     }\
     return name;\
 }
@@ -172,4 +174,3 @@ concept HasDef = requires()
 {
     { T::def() } -> std::same_as<StructDef *>;
 };
-

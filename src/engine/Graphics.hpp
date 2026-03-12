@@ -11,7 +11,13 @@ struct Size {
 
 struct Vec2Reflect {
     static StructDef *def() {
-        return (new StructDef())->member<float>("x")->member<float>("y");
+        static StructDef def{};
+        static bool initialized = false;
+        if (!initialized) {
+            def.member<float>("x")->member<float>("y");
+            initialized = true;
+        }
+        return &def;
     }
 };
 

@@ -18,7 +18,7 @@ enum class GameState {
 struct Player;
 struct Enemy;
 
-[[noreturn]] int main() {
+int main() {
     ecs::World world;
 
     world.create().add<Position, Enemy>().set(Name{"enemy"});
@@ -26,8 +26,5 @@ struct Enemy;
     world.create().add<Position, Player>().set(Name{"sasa"});
 
     world.plugin<CliPlugin>(CliMode::Server, 4040);
-
-    while (true) {
-        world.progress();
-    }
+    return 0;
 }
