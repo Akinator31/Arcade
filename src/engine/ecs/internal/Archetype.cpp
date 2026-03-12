@@ -25,6 +25,7 @@ namespace ecs::internal {
         for (std::size_t i = 0; i < this->columns.size(); i++) {
             auto &[buf, size, _] = this->columns[i];
             free(buf);
+            free(this->columns[i].onRemove.data);
         }
     }
 

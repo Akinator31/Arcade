@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <string>
 #include <cxxabi.h>
-#include <string.h>
 
 namespace reflection {
     using TypeId = uint16_t;
@@ -36,12 +35,24 @@ namespace reflection {
     }
 } // namespace reflection
 
-#define FUNC_LENGTH 28
+template<typename T>
+std::string type_name_string() {
+    std::string value = __PRETTY_FUNCTION__;
+    const std::string key = "T = ";
+    const std::size_t begin = value.find(key);
+    if (begin == std::string::npos) {
+        return value;
+    }
+    const std::size_t start = begin + key.size();
+    const std::size_t end = value.find_first_of(";]", start);
+    if (end == std::string::npos) {
+        return value.substr(start);
+    }
+    return value.substr(start, end - start);
+}
 
 template<typename T>
-char *type_name() {
-    std::string func = __PRETTY_FUNCTION__;
-    func.erase(0, FUNC_LENGTH);
-    func.erase(func.length() - 1, 1);
-    return strdup(func.c_str());
+const char *type_name() {
+    static const std::string func = type_name_string<T>();
+    return func.c_str();
 }

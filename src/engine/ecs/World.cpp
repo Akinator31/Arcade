@@ -9,6 +9,13 @@ namespace ecs {
     }
 
     World::~World() {
+        for (auto &[systems]: this->phases) {
+            for (auto &[id, qid, iter, value, run, destroy, condition]: systems) {
+                if (destroy) {
+                    destroy(value);
+                }
+            }
+        }
         for (auto &[instance, unload, destroy]: this->loaded_plugins) {
             if (instance) {
                 unload(instance, *this);
@@ -174,7 +181,7 @@ namespace ecs {
 
     void World::runSystem(SystemId sys) {
         auto [phase, index] = sys;
-        auto [id, qid, callback, value, run, _] = this->phases[phase].systems.at(index);
+        auto [id, qid, callback, value, run, destroy, condition] = this->phases[phase].systems.at(index);
 
         if (callback) {
             this->read(qid).iter(callback);
@@ -206,7 +213,7 @@ namespace ecs {
     }
 
     void World::runAll(const PhaseId pid) {
-        for (auto [_, qid, callback, value, run, condition]: this->getSystems(pid)) {
+        for (auto [id, qid, callback, value, run, destroy, condition]: this->getSystems(pid)) {
             if (condition && !condition(*this)) {
                 continue;
             }
