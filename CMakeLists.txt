@@ -15,6 +15,13 @@ add_executable(arcade ${SRC_FILES} src/main.cpp
         src/engine/ecs/Timer.hpp
         src/engine/Graphics.hpp
         src/engine/ecs/State.hpp
+        src/engine/reflection/rayflect.hpp
+        src/engine/plugins/CliPlugin.hpp
+        src/engine/parsing/Scanner.cpp
+        src/engine/plugins/NormalMode.cpp
+        src/engine/plugins/EntityMode.cpp
+        src/engine/ecs/Singleton.hpp
+        src/engine/plugins/CliPlugin.cpp
 )
 target_include_directories(arcade PRIVATE include src)
 target_compile_options(arcade PRIVATE -Wall -Wextra -Werror)
@@ -35,11 +42,15 @@ if (BUILD_TESTS)
         add_executable(unittests ${LIB_SRC} ${TEST_SRC}
                 tests/tests_ecs.cpp
                 tests/tests_system.cpp
+                tests/tests_batch.cpp
                 tests/tests_plugin.cpp
                 tests/tests_observer.cpp
                 tests/tests_entity_event.cpp
                 tests/tests_component.cpp
-                tests/tests_relation.cpp)
+                tests/tests_relation.cpp
+                tests/tests_rayflect.cpp
+                tests/tests_cli.cpp
+                tests/tests_json.cpp)
 
         target_compile_options(unittests PRIVATE -Wall -Wextra --coverage)
         target_link_options(unittests PRIVATE --coverage)

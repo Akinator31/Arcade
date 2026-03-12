@@ -4,6 +4,9 @@
 struct ChildOf {
 };
 
+struct OwnedBy : ecs::DespawnRelated {
+};
+
 Test(relation, simple) {
     ecs::World world;
 
@@ -38,6 +41,29 @@ Test(relation, despawn) {
     cr_assert(world.has_source<ChildOf>(parent, child));
     world.kill(parent);
     cr_assert(!world.has_target<ChildOf>(child, parent));
+    // Since ChildOf does not have despawn_related, child is still alive
+    cr_assert(world.isAlive(child));
+}
+
+Test(relation, despawn_related) {
+    ecs::World world;
+    world.relation<OwnedBy>();
+
+    const ecs::Entity parent = world.entity();
+    const ecs::Entity child1 = world.entity();
+    const ecs::Entity child2 = world.entity();
+
+    world.relate<OwnedBy>(child1, parent);
+    world.relate<OwnedBy>(child2, parent);
+
+    cr_assert(world.has_source<OwnedBy>(parent, child1));
+    cr_assert(world.has_source<OwnedBy>(parent, child2));
+
+    world.kill(parent);
+
+    cr_assert(!world.isAlive(parent));
+    cr_assert(!world.isAlive(child1));
+    cr_assert(!world.isAlive(child2));
 }
 
 Test(relation, iterRelated) {

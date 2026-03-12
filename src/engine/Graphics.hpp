@@ -2,15 +2,17 @@
 #include <cstdint>
 
 #include "ecs/World.hpp"
+#include "reflection/rayflect.hpp"
 
 struct Size {
     float width;
     float height;
 };
 
-struct Vec2 {
-    float x;
-    float y;
+struct Vec2Reflect {
+    static StructDef *def() {
+        return (new StructDef())->member<float>("x")->member<float>("y");
+    }
 };
 
 struct Color {
@@ -26,12 +28,12 @@ struct Node {
     float borderWidth;
 };
 
-struct GlobalPosition : Vec2 {
+struct GlobalPosition : Vec2Reflect {
 };
 
-struct Position : Vec2, Required<GlobalPosition> {
-    Position() = default;
+struct Position : Required<GlobalPosition>, Vec2Reflect {
+    float x, y;
 
-    Position(const float x, const float y) : Vec2{x, y} {
+    Position(const float x, const float y) : x(x), y(y) {
     }
 };

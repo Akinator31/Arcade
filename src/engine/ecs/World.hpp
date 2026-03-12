@@ -2,9 +2,9 @@
 #include "Query.hpp"
 #include "internal/ArchetypeRegistry.hpp"
 #include "internal/EntityRegistry.hpp"
+#include "internal/ComponentRegistry.hpp"
 #include <array>
 #include <functional>
-#include <iostream>
 #include <utility>
 #include <tuple>
 
@@ -15,70 +15,21 @@
 #include "engine/reflection/TypeCounter.hpp"
 #include "internal/EventRegistry.hpp"
 #include "Relation.hpp"
-
-
-template<typename T>
-struct RelationSource {
-    datastructures::EcsVec<ecs::Entity> entities;
-};
-
-template<typename T>
-struct RelationTarget {
-    ecs::Entity target;
-};
-
-class Hierarchy {
-};
-
-using Parent = RelationTarget<Hierarchy>;
-using Children = RelationSource<Hierarchy>;
-
+#include "Singleton.hpp"
+#include "CoreComponents.hpp"
+#include "EntityRef.hpp"
+#include "Plugin.hpp"
+#include "TablesReader.hpp"
 
 namespace ecs {
-    class World;
-
-
-    struct PluginFamily {
-    };
-
-    using PluginId = uint16_t;
-
-    template<typename T>
-    concept IsPlugin = requires(T plugin, World &world)
-    {
-        { plugin.load(world) };
-        { plugin.unload(world) };
-    };
-
-    template<typename T>
-    concept HasOnAdd = requires(World &world, Entity entity)
-    {
-        { T::onAdd(world, entity) };
-    };
-    template<typename T>
-    concept HasOnSet = requires(World &world, Entity entity, const T *value)
-    {
-        { T::onSet(world, entity, value) };
-    };
-
-    class EntityRef;
-
-    class World : public internal::EventRegistry, public StateRegistry {
-        struct PluginRecord {
-            void *instance = nullptr;
-
-            void (*unload)(void *, World &) = nullptr;
-
-            void (*destroy)(void *) = nullptr;
-        };
-
-        internal::EntityRegistry entity_registry;
+    class World : public internal::EventRegistry, public StateRegistry, public SingletonRegistry {
         std::vector<QueryCache> queries;
         PhaseContainer phase_container;
         std::vector<Phase> phases;
         std::vector<PluginRecord> loaded_plugins;
 
     public:
+        internal::EntityRegistry entity_registry;
         internal::ComponentRegistry component_registry;
         internal::ArchetypeRegistry archetype_registry;
 
@@ -133,32 +84,13 @@ namespace ecs {
             return nullptr;
         }
 
-        EntityRef entity();
+        Entity entity();
+
+        EntityRef create();
 
         void kill(Entity entity);
 
         [[nodiscard]] bool isAlive(Entity entity);
-
-        template<typename T>
-        void add(const Entity entity) {
-            this->component_registry.registerComponent<T>();
-
-            if (this->add_id(entity, reflection::type_id<T>())) {
-                if constexpr (HasOnAdd<T>) {
-                    T::onAdd(*this, entity);
-                }
-                if constexpr (HasFromWorldConstructor<T>) {
-                    T *value = this->get<T>(entity);
-                    *value = T(*this);
-                } else if constexpr (HasDefaultConstructor<T>) {
-                    T *value = this->get<T>(entity);
-                    *value = T();
-                }
-                if constexpr (HasRequiredComponents<T>) {
-                    T::add(*this, entity);
-                }
-            }
-        }
 
         template<typename T>
         void remove(const Entity entity) {
@@ -236,9 +168,13 @@ namespace ecs {
 
             struct OnDespawnSource : With<Source>, On<Despawn> {
                 static void observe(internal::Archetype &arch, internal::EntityRow row) {
-                    for (auto *sources = static_cast<Source *>(arch.getComponent(row, reflection::type_id<Source>()));
-                         const Entity entity: sources->entities) {
-                        arch.world.unrelate<T>(entity);
+                    auto *sources = static_cast<Source *>(arch.getComponent(row, reflection::type_id<Source>()));
+                    for (auto entities_copy = sources->entities.clone(); const Entity entity: entities_copy) {
+                        if constexpr (requires { requires T::despawn_related; }) {
+                            arch.world.kill(entity);
+                        } else {
+                            arch.world.unrelate<T>(entity);
+                        }
                     }
                 }
             };
@@ -280,7 +216,7 @@ namespace ecs {
 
         template<typename T, bool Recursive = false>
         auto iterRelated(const Entity target) {
-            ComponentID source_id = reflection::type_id<RelationSource<T> >();
+            const ComponentID source_id = reflection::type_id<RelationSource<T> >();
             if constexpr (Recursive) {
                 return RelatedRangeRecursive{this, target, source_id};
             } else {
@@ -397,41 +333,6 @@ namespace ecs {
             return (Filter{}(view, row) && ...);
         }
 
-        class TablesReader {
-        protected:
-            const datastructures::EcsVec<ArchetypeID> *matches = nullptr;
-            World *world = nullptr;
-
-        public:
-            TablesReader() = default;
-
-            TablesReader(const datastructures::EcsVec<ArchetypeID> &matches, World &world)
-                : matches(&matches), world(&world) {
-            }
-
-            template<typename Func>
-                requires std::invocable<Func, ArchetypeView &>
-            void iter(Func &&func) {
-                for (const ArchetypeID tableId: *this->matches) {
-                    if (auto view = ArchetypeView(this->world->getArchetypes().at(tableId), *this->world);
-                        view.count() > 0) {
-                        func(view);
-                    }
-                }
-            }
-        };
-
-        class OwnedTablesReader : public TablesReader {
-            QueryCache cache;
-
-        public:
-            explicit OwnedTablesReader(QueryCache &&cache, World &world) : TablesReader(),
-                                                                           cache(std::move(cache)) {
-                this->matches = &this->cache.matches;
-                this->world = &world;
-            }
-        };
-
         template
         <
             typename
@@ -455,16 +356,62 @@ namespace ecs {
 
         void start();
 
-    public:
         void *get_id(Entity entity, ComponentID cid);
+
+        bool add_id(Entity entity, ComponentID cid);
+
+        void remove_id(Entity entity, ComponentID cid);
+
+        bool add_id_batched(Entity entity, const ComponentID *cid, uint count);
+
+        template<typename... Components>
+        void add(const Entity entity) {
+            (this->component_registry.registerComponent<Components>(), ...);
+
+            const ComponentID cid[] = {reflection::type_id<Components>()...};
+
+            bool result = false;
+
+            if constexpr (sizeof...(Components) > 1) {
+                result = this->add_id_batched(entity, cid, sizeof...(Components));
+            } else {
+                result = this->add_id(entity, cid[0]);
+            }
+
+            if (result) {
+                auto invoke_on_add = [&]<typename C>() {
+                    if constexpr (HasOnAdd<C>) {
+                        C::onAdd(*this, entity);
+                    }
+                };
+                (invoke_on_add.template operator()<Components>(), ...);
+
+                auto invoke_constructors = [&]<typename C>() {
+                    if constexpr (reflection::is_complete<C>()) {
+                        if constexpr (HasFromWorldConstructor<C>) {
+                            C *value = this->get<C>(entity);
+                            *value = C(*this);
+                        } else if constexpr (HasDefaultConstructor<C>) {
+                            C *value = this->get<C>(entity);
+                            *value = C();
+                        }
+                    }
+                };
+                (invoke_constructors.template operator()<Components>(), ...);
+
+                auto invoke_add = [&]<typename C>() {
+                    if constexpr (HasRequiredComponents<C>) {
+                        C::add(*this, entity);
+                    }
+                };
+                (invoke_add.template operator()<Components>(), ...);
+            }
+        }
 
     private:
         void removeEntityOfArchetype(internal::Archetype &oldArch,
                                      internal::EntityRow row);
 
-        bool add_id(Entity entity, ComponentID cid);
-
-        void remove_id(Entity entity, ComponentID cid);
 
         void migrate(Entity, ArchetypeID newArchId);
 
@@ -473,36 +420,22 @@ namespace ecs {
         ArchetypeID findOrCreateArchetype(EntityType &&type);
     };
 
-    class EntityRef : public Entity {
-        World &world;
-
-    public:
-        explicit EntityRef(World &world, const Entity entity) : Entity(entity), world(world) {
+    template<typename Func>
+        requires std::invocable<Func, ArchetypeView &>
+    void TablesReader::iter(Func &&func) {
+        for (const ArchetypeID tableId: *this->matches) {
+            if (auto view = ArchetypeView(this->world->getArchetypes().at(tableId), *this->world);
+                view.count() > 0) {
+                func(view);
+            }
         }
-
-        template<typename... Components>
-        EntityRef &&add() {
-            (this->world.add<Components>(this), ...);
-            return std::move(*this);
-        }
-
-
-        template<typename... Components>
-        EntityRef &&set(Components... value) {
-            (this->world.set<Components>(this->entity(), value), ...);
-            return std::move(*this);
-        }
-
-        [[nodiscard]] Entity entity() const {
-            return {this->index, this->generation};
-        }
-    };
+    }
 } // namespace ecs
 
 template<typename... Components>
 struct Required {
     static void add(ecs::World &world, const ecs::Entity entity) {
-        (world.add<Components>(entity), ...);
+        world.add<Components...>(entity);
     }
 };
 
@@ -524,3 +457,23 @@ struct InState {
         return world.getState<decltype(value)>() == value;
     }
 };
+
+namespace ecs {
+    template<typename... Components>
+    EntityRef &&EntityRef::add() {
+        world.add<Components...>(this->entity());
+        return std::move(*this);
+    }
+
+    template<typename... Components>
+    EntityRef &&EntityRef::set(Components... value) {
+        (this->world.set<Components>(this->entity(), value), ...);
+        return std::move(*this);
+    }
+
+    template<typename Event, typename Func>
+    EntityRef &&EntityRef::listen(Func &&func) {
+        this->world.listen<Event>(this->entity(), func);
+        return std::move(*this);
+    }
+}

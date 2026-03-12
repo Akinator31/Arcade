@@ -12,7 +12,9 @@ namespace ecs {
         Entity *current;
 
         std::pair<Entity, Entity> operator*() const;
+
         RelatedIteratorNonRecursive &operator++();
+
         bool operator!=(const RelatedIteratorNonRecursive &other) const;
     };
 
@@ -30,10 +32,13 @@ namespace ecs {
         uint32_t stack_size = 0;
 
         RelatedIteratorRecursive(World *w, Entity start, ComponentID source_id);
+
         RelatedIteratorRecursive();
 
         std::pair<Entity, Entity> operator*() const;
+
         RelatedIteratorRecursive &operator++();
+
         bool operator!=(const RelatedIteratorRecursive &other) const;
     };
 
@@ -43,6 +48,7 @@ namespace ecs {
         ComponentID source_id;
 
         RelatedIteratorNonRecursive begin() const;
+
         RelatedIteratorNonRecursive end() const;
     };
 
@@ -52,6 +58,11 @@ namespace ecs {
         ComponentID source_id;
 
         RelatedIteratorRecursive begin() const;
+
         RelatedIteratorRecursive end() const;
+    };
+
+    struct DespawnRelated {
+        static constexpr bool despawn_related = true;
     };
 }

@@ -5,9 +5,12 @@
 #pragma once
 #include <vector>
 #include "type.hpp"
-#include "World.hpp"
 #include "internal/Archetype.hpp"
 #include "engine/reflection/type_id.hpp"
+
+namespace ecs {
+    class World;
+}
 
 class Query {
 public:

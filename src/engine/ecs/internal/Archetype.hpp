@@ -1,10 +1,13 @@
 #pragma once
-#include "ComponentRegistry.hpp"
 #include "engine/datastructures/SparseIndices.hpp"
 #include "engine/datastructures/SparseSet.hpp"
 #include "engine/ecs/type.hpp"
 
 #include <optional>
+
+namespace ecs {
+    class World;
+}
 
 namespace ecs::internal {
     class Archetype;
@@ -41,7 +44,7 @@ namespace ecs::internal {
         // store at ComponentID: { buffer, element_size }
 
     public:
-        World &world;
+        ecs::World &world;
 
         datastructures::SparseSet<ArchetypeColumn, uint8_t> columns;
 
@@ -51,7 +54,7 @@ namespace ecs::internal {
         datastructures::EcsVec<ObserverFunc> onAdd;
         datastructures::EcsVec<ObserverFunc> onDespawn;
 
-        Archetype(EntityType &&type, World &world);
+        Archetype(EntityType &&type, ecs::World &world);
 
         ~Archetype();
 
@@ -84,6 +87,7 @@ namespace ecs::internal {
         [[nodiscard]] void *getColumn(ComponentID component) const;
 
         [[nodiscard]] bool has(ComponentID component) const;
+        [[nodiscard]] bool stores(ComponentID component) const;
 
         [[nodiscard]] std::size_t count() const;
 
