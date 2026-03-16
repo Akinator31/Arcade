@@ -11,6 +11,7 @@ CliPlugin::CliPlugin(const CliMode mode, const uint16_t port) : mode(mode), port
 }
 
 void CliPlugin::load(ecs::World &world) {
+    world.registerComponent<Name>();
     if (mode == CliMode::Server) {
         start_server();
     }

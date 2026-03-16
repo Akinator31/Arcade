@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/plugins/CliPlugin.hpp"
+#include "engine/plugins/cli/CliPlugin.hpp"
 
 namespace cli::entity_mode_commands {
     CliPlugin::CommandHandler ls();

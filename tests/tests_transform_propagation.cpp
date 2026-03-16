@@ -1,5 +1,5 @@
 #include "engine/ecs/World.hpp"
-#include "engine/plugins/render/PositionPropagationPlugin.hpp"
+#include "engine/plugins/render/PositionPropagationPlugin/PositionPropagationPlugin.hpp"
 #include <criterion/criterion.h>
 
 Test(position_propagation_plugin, propagates_local_positions_through_hierarchy) {
@@ -32,7 +32,7 @@ Test(position_propagation_plugin, uses_root_global_position_when_no_local_positi
     world.plugin<PositionPropagationPlugin>();
 
     const ecs::Entity root = world.entity();
-    world.set<GlobalPosition>(root, GlobalPosition{.x = 100.f, .y = 50.f});
+    world.set<GlobalPosition>(root, GlobalPosition{100.f, 50.f});
 
     const ecs::Entity child = world.create().set(Position{3.f, 4.f}).relate<Hierarchy>(root).id();
 

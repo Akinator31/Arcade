@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(ENABLE_SANITIZERS "Build with sanitizers" OFF)
+option(BUILD_PLATFORM_LIBS "Build platform dynamic libraries" OFF)
 
 set(ARCADE_COMMON_COMPILE_OPTIONS -Wall -Wextra -Werror)
 set(ARCADE_SANITIZER_COMPILE_OPTIONS)
@@ -24,25 +25,27 @@ endif ()
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS "src/*.cpp")
 list(REMOVE_ITEM SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 
-find_package(SFML 2.5 REQUIRED COMPONENTS graphics window system)
+if (BUILD_PLATFORM_LIBS)
+    find_package(SFML 2.5 REQUIRED COMPONENTS graphics window system)
 
-add_library(sfml_api SHARED
-        platforms/SfmlApi.cpp
-        platforms/SfmlApi.hpp
-)
-target_include_directories(sfml_api
-        PUBLIC
-        src
-        platforms
-)
-target_link_libraries(sfml_api
-        PRIVATE
-        sfml-graphics
-        sfml-window
-        sfml-system
-)
-target_compile_options(sfml_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
-target_link_options(sfml_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+    add_library(sfml_api SHARED
+            platforms/SfmlApi.cpp
+            platforms/SfmlApi.hpp
+    )
+    target_include_directories(sfml_api
+            PUBLIC
+            src
+            platforms
+    )
+    target_link_libraries(sfml_api
+            PRIVATE
+            sfml-graphics
+            sfml-window
+            sfml-system
+    )
+    target_compile_options(sfml_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    target_link_options(sfml_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+endif ()
 
 add_executable(arcade ${SRC_FILES} src/main.cpp
         src/engine/ecs/Query.hpp
@@ -53,15 +56,15 @@ add_executable(arcade ${SRC_FILES} src/main.cpp
         src/engine/Graphics.hpp
         src/engine/ecs/State.hpp
         src/engine/reflection/rayflect.hpp
-        src/engine/plugins/CliPlugin.hpp
+        src/engine/plugins/cli/CliPlugin.hpp
         src/engine/parsing/Scanner.cpp
-        src/engine/plugins/NormalMode.cpp
-        src/engine/plugins/EntityMode.cpp
+        src/engine/plugins/cli/NormalMode.cpp
+        src/engine/plugins/cli/EntityMode.cpp
         src/engine/ecs/Singleton.hpp
-        src/engine/plugins/CliPlugin.cpp
+        src/engine/plugins/cli/CliPlugin.cpp
         src/engine/dynamic/DynamicLoader.hpp
         src/engine/dynamic/Loader.hpp
-        src/engine/plugins/render/RenderPlugin.hpp
+        src/engine/plugins/render/RenderPlugin/RenderPlugin.hpp
         src/engine/IEngine.hpp
 )
 target_include_directories(arcade PRIVATE include src)

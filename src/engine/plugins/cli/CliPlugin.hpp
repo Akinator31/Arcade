@@ -50,12 +50,15 @@ struct CliPlugin {
     network::TcpServer server;
 
     void load(ecs::World &world);
-    void unload(ecs::World &world);
+
+    static void unload(ecs::World &world);
 
     void init_normal_commands();
+
     void init_entity_commands();
 
     [[nodiscard]] static std::string prompt(const CliSession &current_session);
+
     [[nodiscard]] std::string prompt() const;
 
     void execute_command(std::unordered_map<std::string, CommandHandler> &commands,
@@ -63,22 +66,34 @@ struct CliPlugin {
                          ecs::World &world,
                          Scanner &scanner,
                          std::ostream &output);
+
     void progress(ecs::World &world,
                   const std::string &input,
                   std::ostream &output,
                   CliSession &current_session);
+
     void progress(ecs::World &world, const std::string &input, std::ostream &output = std::cout);
+
     [[nodiscard]] std::string execute(ecs::World &world, const std::string &input, CliSession &current_session);
+
     [[nodiscard]] std::string execute(ecs::World &world, const std::string &input);
+
     void tick(ecs::World &world);
-    ecs::Entity create_named_entity(ecs::World &world, const std::string &name);
+
+    static ecs::Entity create_named_entity(ecs::World &world, const std::string &name);
 
 private:
     void start_server();
+
     void tick_server(ecs::World &world);
+
     void tick_interactive(ecs::World &world);
+
     void send_prompts_to_new_clients();
+
     void handle_client_messages(ecs::World &world);
+
     void remove_closed_sessions();
+
     const char *store_name(const std::string &name);
 };

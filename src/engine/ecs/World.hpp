@@ -114,6 +114,46 @@ namespace ecs {
         }
 
         template<typename T>
+        void registerComponent() {
+            const ComponentID cid = reflection::type_id<T>();
+            if (this->component_registry.isRegistered(cid)) {
+                return;
+            }
+
+            this->component_registry.registerComponent<T>();
+            auto &record = this->component_registry.getRecord(cid);
+
+            if constexpr (reflection::is_complete<T>()) {
+                if constexpr (HasFromWorldConstructor<T>) {
+                    record.construct = [](World &world, const Entity entity) {
+                        if (T *value = world.get<T>(entity); value != nullptr) {
+                            *value = T(world);
+                        }
+                    };
+                } else if constexpr (HasDefaultConstructor<T>) {
+                    record.construct = [](World &world, const Entity entity) {
+                        if (T *value = world.get<T>(entity); value != nullptr) {
+                            *value = T();
+                        }
+                    };
+                }
+            }
+
+            if constexpr (HasOnAdd<T>) {
+                record.onAdd = [](World &world, const Entity entity) {
+                    T::onAdd(world, entity);
+                };
+            }
+
+            if constexpr (requires(ecs::World &world) { T::registerRequiredComponents(world); }) {
+                T::registerRequiredComponents(*this);
+                for (const ComponentID required_cid: T::required_components()) {
+                    this->component_registry.addRequired(cid, required_cid);
+                }
+            }
+        }
+
+        template<typename T>
         T *get(const Entity entity) {
             return static_cast<T *>(this->get_id(entity, reflection::type_id<T>()));
         }
@@ -151,7 +191,7 @@ namespace ecs {
             using Target = RelationTarget<T>;
             using Source = RelationSource<T>;
             if (this->has<Target>(source)) {
-                Target *oldTarget = this->get<Target>(source);
+                auto *oldTarget = this->get<Target>(source);
                 datastructures::EcsVec<Entity> &entities = this->get<Source>(oldTarget->target)->entities;
                 entities.remove(source);
                 if (entities.size == 0) {
@@ -176,7 +216,8 @@ namespace ecs {
             using Target = RelationTarget<T>;
             using Source = RelationSource<T>;
 
-            this->component_registry.registerComponent<RelationTarget<T> >();
+            this->registerComponent<Target>();
+            this->registerComponent<Source>();
 
             struct OnDespawnTarget : With<Target>, On<Despawn> {
                 static void observe(internal::Archetype &arch, internal::EntityRow row) {
@@ -411,49 +452,22 @@ namespace ecs {
 
         template<typename... Components>
         void add(const Entity entity) {
-            (this->component_registry.registerComponent<Components>(), ...);
-
             const ComponentID cid[] = {reflection::type_id<Components>()...};
 
-            bool result = false;
-
             if constexpr (sizeof...(Components) > 1) {
-                result = this->add_id_batched(entity, cid, sizeof...(Components));
+                this->add_id_batched(entity, cid, sizeof...(Components));
             } else {
-                result = this->add_id(entity, cid[0]);
-            }
-
-            if (result) {
-                auto invoke_constructors = [&]<typename C>() {
-                    if constexpr (reflection::is_complete<C>()) {
-                        if constexpr (HasFromWorldConstructor<C>) {
-                            C *value = this->get<C>(entity);
-                            *value = C(*this);
-                        } else if constexpr (HasDefaultConstructor<C>) {
-                            C *value = this->get<C>(entity);
-                            *value = C();
-                        }
-                    }
-                };
-                (invoke_constructors.template operator()<Components>(), ...);
-
-                auto invoke_on_add = [&]<typename C>() {
-                    if constexpr (HasOnAdd<C>) {
-                        C::onAdd(*this, entity);
-                    }
-                };
-                (invoke_on_add.template operator()<Components>(), ...);
-
-                auto invoke_add = [&]<typename C>() {
-                    if constexpr (HasRequiredComponents<C>) {
-                        C::add(*this, entity);
-                    }
-                };
-                (invoke_add.template operator()<Components>(), ...);
+                this->add_id(entity, cid[0]);
             }
         }
 
     private:
+        void constructComponent(Entity entity, ComponentID cid);
+
+        void runOnAdd(Entity entity, ComponentID cid);
+
+        void addRequiredComponents(Entity entity, ComponentID cid);
+
         void removeEntityOfArchetype(internal::Archetype &oldArch,
                                      internal::EntityRow row);
 
@@ -479,8 +493,12 @@ namespace ecs {
 
 template<typename... Components>
 struct Required {
-    static void add(ecs::World &world, const ecs::Entity entity) {
-        world.add<Components...>(entity);
+    static std::array<ecs::ComponentID, sizeof...(Components)> required_components() {
+        return {reflection::type_id<Components>()...};
+    }
+
+    static void registerRequiredComponents(ecs::World &world) {
+        (world.registerComponent<Components>(), ...);
     }
 };
 

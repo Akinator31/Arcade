@@ -7,7 +7,7 @@
 #include <thread>
 #include <unistd.h>
 #include "engine/ecs/World.hpp"
-#include "engine/plugins/CliPlugin.hpp"
+#include "engine/plugins/cli/CliPlugin.hpp"
 
 struct Enemy;
 
@@ -72,7 +72,7 @@ Test(cli, normal_ls, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
-    world.component_registry.registerComponent<Position>();
+    world.registerComponent<Position>();
 
     cli.progress(world, "ls");
 
@@ -216,8 +216,8 @@ Test(cli, entity_ls, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
-    world.component_registry.registerComponent<Position>();
-    world.component_registry.registerComponent<Name>();
+    world.registerComponent<Position>();
+    world.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
     world.set<Name>(e1, Name{"Player1"});
@@ -262,8 +262,8 @@ Test(cli, entity_print, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
-    world.component_registry.registerComponent<Position>();
-    world.component_registry.registerComponent<Name>();
+    world.registerComponent<Position>();
+    world.registerComponent<Name>();
 
     ecs::Entity e1 = world.entity();
     world.set<Name>(e1, Name{"Player1"});
@@ -288,8 +288,8 @@ Test(cli, entity_set, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
-    world.component_registry.registerComponent<Position>();
-    world.component_registry.registerComponent<Name>();
+    world.registerComponent<Position>();
+    world.registerComponent<Name>();
 
     ecs::Entity e1 = world.entity();
     world.set<Name>(e1, Name{"Player1"});
@@ -313,8 +313,8 @@ Test(cli, entity_add, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
-    world.component_registry.registerComponent<Position>();
-    world.component_registry.registerComponent<Name>();
+    world.registerComponent<Position>();
+    world.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
     world.set<Name>(e1, Name{"Player1"});
@@ -330,7 +330,7 @@ Test(cli, entity_add_missing_component, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
-    world.component_registry.registerComponent<Name>();
+    world.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
     world.set<Name>(e1, Name{"Player1"});
@@ -347,8 +347,8 @@ Test(cli, entity_remove, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
-    world.component_registry.registerComponent<Position>();
-    world.component_registry.registerComponent<Name>();
+    world.registerComponent<Position>();
+    world.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
     world.set<Name>(e1, Name{"Player1"});
@@ -365,7 +365,7 @@ Test(cli, entity_remove_missing_component, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
-    world.component_registry.registerComponent<Name>();
+    world.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
     world.set<Name>(e1, Name{"Player1"});
@@ -382,8 +382,8 @@ Test(cli, entity_remove_incomplete_tag, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
-    world.component_registry.registerComponent<Name>();
-    world.component_registry.registerComponent<Enemy>();
+    world.registerComponent<Name>();
+    world.registerComponent<Enemy>();
 
     const ecs::Entity e1 = world.entity();
     world.set<Name>(e1, Name{"Player1"});
@@ -402,7 +402,7 @@ Test(cli, entity_print_name, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
-    world.component_registry.registerComponent<Name>();
+    world.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
     world.set<Name>(e1, Name{"Hero"});
@@ -444,7 +444,7 @@ Test(cli, server_execute_returns_output_and_prompt) {
     ecs::World world;
     CliPlugin cli(CliMode::Server, 4242);
 
-    world.component_registry.registerComponent<Name>();
+    world.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
     world.set<Name>(e1, Name{"Hero"});
@@ -486,7 +486,7 @@ Test(cli, server_mode_serves_prompt_and_commands) {
     ecs::World world;
     const uint16_t port = find_free_port();
 
-    world.component_registry.registerComponent<Name>();
+    world.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
     world.set<Name>(e1, Name{"Hero"});

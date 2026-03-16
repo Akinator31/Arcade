@@ -26,6 +26,9 @@ SYSTEM(RenderRectSys, With<GlobalPosition, Size, Color>) {
 
 struct RenderPlugin {
     void load(ecs::World &world) {
+        world.registerComponent<GlobalPosition>();
+        world.registerComponent<Size>();
+        world.registerComponent<Color>();
         world.system<RenderRectSys>();
     }
 

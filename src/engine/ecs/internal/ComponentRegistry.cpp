@@ -1,20 +1,27 @@
 #include "ComponentRegistry.hpp"
 
+#include <algorithm>
+
 namespace ecs::internal {
     std::size_t ComponentRegistry::getSize(const ComponentID cid) const {
-        if (cid >= this->components.size()) {
+        if (!this->isRegistered(cid)) {
             return 0;
         }
         return this->components[cid].size;
     }
 
+    bool ComponentRegistry::isRegistered(const ComponentID cid) const {
+        return cid < this->components.size() && this->components[cid].registered;
+    }
+
     void ComponentRegistry::registerComponent(const ComponentID cid, const std::size_t size, StructDef *def) {
-        if (cid < this->components.size() && this->components[cid].size != 0) {
+        if (this->isRegistered(cid)) {
             return;
         }
         if (cid >= this->components.size()) {
             this->components.resize(cid + 1);
         }
+        this->components[cid].registered = true;
         this->components[cid].size = size;
         this->components[cid].def = def;
     }
@@ -34,7 +41,10 @@ namespace ecs::internal {
         if (cid >= this->components.size()) {
             this->components.resize(cid + 1);
         }
-        this->components[cid].required.push_back(requiredCid);
+        if (std::find(this->components[cid].required.begin(), this->components[cid].required.end(), requiredCid) ==
+            this->components[cid].required.end()) {
+            this->components[cid].required.push_back(requiredCid);
+        }
     }
 
     static constexpr std::vector<ArchetypeID> emptyArchetypes;
