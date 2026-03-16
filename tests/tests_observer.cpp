@@ -6,6 +6,7 @@
 
 #include <criterion/criterion.h>
 
+#include "engine/Graphics.hpp"
 #include "engine/ecs/Query.hpp"
 
 struct Player {
@@ -77,5 +78,28 @@ Test(observer, already_created_table) {
     world.system<OnDespawnPlayer>();
 
     world.add<Player>(player);
+    cr_assert_eq(count, 1);
+}
+
+Test(observer, remove_observer) {
+    ecs::World world;
+
+    static int count = 0;
+    SYSTEM(OnAddPlayer, With<Player>, On<Add>) {
+        OBSERVE(,) {
+            count += 1;
+        }
+    };
+    auto [pid, index] = world.system<OnAddPlayer>();
+    const ecs::QueryID qid = world.getSystems(pid)[index].qid;
+
+
+    cr_assert_eq(count, 0);
+    cr_assert_eq(world.queries[qid].matches.size, 0);
+    world.create().add<Player>();
+    cr_assert_eq(world.queries[qid].matches.size, 1);
+    cr_assert_eq(count, 1);
+    world.remove<OnAddPlayer>();
+    world.create().add<Player>();
     cr_assert_eq(count, 1);
 }

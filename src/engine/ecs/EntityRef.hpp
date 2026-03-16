@@ -19,10 +19,17 @@ namespace ecs {
         template<typename... Components>
         EntityRef &&set(Components... value);
 
+        template<typename Relation>
+        EntityRef &&relate(Entity target);
+
         template<typename Event, typename Func>
         EntityRef &&listen(Func &&func);
 
         [[nodiscard]] Entity entity() const {
+            return {this->index, this->generation};
+        }
+
+        [[nodiscard]] Entity id() const {
             return {this->index, this->generation};
         }
     };

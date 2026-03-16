@@ -20,7 +20,7 @@ if (ENABLE_SANITIZERS)
     list(APPEND ARCADE_SANITIZER_LINK_OPTIONS -fsanitize=address,undefined)
 endif ()
 
-file(GLOB_RECURSE SRC_FILES "src/*.cpp")
+file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS "src/*.cpp")
 list(REMOVE_ITEM SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 
 add_executable(arcade ${SRC_FILES} src/main.cpp
@@ -38,6 +38,7 @@ add_executable(arcade ${SRC_FILES} src/main.cpp
         src/engine/plugins/EntityMode.cpp
         src/engine/ecs/Singleton.hpp
         src/engine/plugins/CliPlugin.cpp
+        src/IEngine.hpp
 )
 target_include_directories(arcade PRIVATE include src)
 target_compile_options(arcade PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
@@ -52,9 +53,9 @@ if (BUILD_TESTS)
     find_library(CRITERION_LIB criterion)
 
     if (CRITERION_LIB)
-        file(GLOB_RECURSE LIB_SRC "src/*.cpp")
+        file(GLOB_RECURSE LIB_SRC CONFIGURE_DEPENDS "src/*.cpp")
         list(FILTER LIB_SRC EXCLUDE REGEX "src/main\\.cpp$")
-        file(GLOB_RECURSE TEST_SRC "tests/*.cpp")
+        file(GLOB_RECURSE TEST_SRC CONFIGURE_DEPENDS "tests/*.cpp")
 
         add_executable(unittests ${LIB_SRC} ${TEST_SRC}
                 tests/tests_ecs.cpp

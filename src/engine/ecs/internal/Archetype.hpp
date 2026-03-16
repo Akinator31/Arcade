@@ -34,6 +34,19 @@ namespace ecs::internal {
                 std::memcpy(this->data + this->size, &value, sizeof(ObserverFunc));
                 this->size += 1;
             }
+
+            void remove(const ObserverFunc value) {
+                for (uint8_t i = 0; i < this->size; i++) {
+                    if (this->data[i] == value) {
+                        const uint8_t last = this->size - 1;
+                        if (i != last) {
+                            std::memcpy(this->data + i, this->data + last, sizeof(ObserverFunc));
+                        }
+                        this->size -= 1;
+                        return;
+                    }
+                }
+            }
         } onRemove;
     };
 

@@ -47,9 +47,9 @@ namespace ecs {
         Entity target;
         ComponentID source_id;
 
-        RelatedIteratorNonRecursive begin() const;
+        [[nodiscard]] RelatedIteratorNonRecursive begin() const;
 
-        RelatedIteratorNonRecursive end() const;
+        [[nodiscard]] RelatedIteratorNonRecursive end() const;
     };
 
     struct RelatedRangeRecursive {
@@ -57,9 +57,9 @@ namespace ecs {
         Entity target;
         ComponentID source_id;
 
-        RelatedIteratorRecursive begin() const;
+        [[nodiscard]] RelatedIteratorRecursive begin() const;
 
-        RelatedIteratorRecursive end() const;
+        [[nodiscard]] RelatedIteratorRecursive end() const;
     };
 
     struct DespawnRelated {

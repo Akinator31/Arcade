@@ -1,5 +1,9 @@
 #pragma once
 #include "Query.hpp"
+#include <deque>
+#include <optional>
+#include <string>
+#include <unordered_map>
 #include "internal/ArchetypeRegistry.hpp"
 #include "internal/EntityRegistry.hpp"
 #include "internal/ComponentRegistry.hpp"
@@ -7,7 +11,6 @@
 #include <functional>
 #include <utility>
 #include <tuple>
-
 #include "Component.hpp"
 #include "State.hpp"
 #include "System.hpp"
@@ -20,15 +23,18 @@
 #include "EntityRef.hpp"
 #include "Plugin.hpp"
 #include "TablesReader.hpp"
+#include "engine/Graphics.hpp"
 
 namespace ecs {
     class World : public internal::EventRegistry, public StateRegistry, public SingletonRegistry {
-        std::vector<QueryCache> queries;
         PhaseContainer phase_container;
         std::vector<Phase> phases;
         std::vector<PluginRecord> loaded_plugins;
+        std::deque<std::string> stored_entity_names;
+        std::unordered_map<std::string, Entity> entity_name_to_entity;
 
     public:
+        std::vector<QueryCache> queries;
         internal::EntityRegistry entity_registry;
         internal::ComponentRegistry component_registry;
         internal::ArchetypeRegistry archetype_registry;
@@ -37,7 +43,7 @@ namespace ecs {
 
         World();
 
-        ~World();
+        ~World() override;
 
         template<typename T, typename... Args>
         void plugin(Args &&... args) {
@@ -91,6 +97,16 @@ namespace ecs {
         void kill(Entity entity);
 
         [[nodiscard]] bool isAlive(Entity entity);
+
+        const char *storeEntityName(const std::string &name);
+
+        std::string makeEntityName(Entity entity) const;
+
+        void syncEntityName(Entity entity);
+
+        void clearEntityName(Entity entity);
+
+        [[nodiscard]] std::optional<Entity> findEntityByName(const std::string &name) const;
 
         template<typename T>
         void remove(const Entity entity) {
@@ -159,6 +175,8 @@ namespace ecs {
         void relation() {
             using Target = RelationTarget<T>;
             using Source = RelationSource<T>;
+
+            this->component_registry.registerComponent<RelationTarget<T> >();
 
             struct OnDespawnTarget : With<Target>, On<Despawn> {
                 static void observe(internal::Archetype &arch, internal::EntityRow row) {
@@ -293,8 +311,11 @@ namespace ecs {
 
                 if (config.destroy) {
                     config.destroy(config.value);
+                    config.value = nullptr;
+                    config.destroy = nullptr;
                 }
-                return {0, 0};
+                this->phases[pid].systems.push_back(config);
+                return {pid, this->phases[pid].systems.size() - 1};
             }
 
             if constexpr (IsSystem<System>) {
@@ -314,6 +335,23 @@ namespace ecs {
                 auto it = systems.begin();
                 while (it != systems.end()) {
                     if (it->id == SystemCounter::id<System>()) {
+                        if constexpr (IsObserver<System>) {
+                            QueryCache &query = this->queries.at(it->qid);
+
+                            for (const ArchetypeID tid: query.matches) {
+                                auto &arch = this->archetype_registry.getArchetype(tid);
+
+                                if constexpr (std::is_same_v<typename System::phase, Despawn>) {
+                                    arch.onDespawn.remove(System::observe);
+                                } else if constexpr (std::is_same_v<typename System::phase, Remove>) {
+                                    System::remove_removed_components(arch, System::observe);
+                                } else {
+                                    arch.onAdd.remove(System::observe);
+                                }
+                            }
+
+                            query.on_add = nullptr;
+                        }
                         if (it->destroy) {
                             it->destroy(it->value);
                         }
@@ -386,13 +424,6 @@ namespace ecs {
             }
 
             if (result) {
-                auto invoke_on_add = [&]<typename C>() {
-                    if constexpr (HasOnAdd<C>) {
-                        C::onAdd(*this, entity);
-                    }
-                };
-                (invoke_on_add.template operator()<Components>(), ...);
-
                 auto invoke_constructors = [&]<typename C>() {
                     if constexpr (reflection::is_complete<C>()) {
                         if constexpr (HasFromWorldConstructor<C>) {
@@ -405,6 +436,13 @@ namespace ecs {
                     }
                 };
                 (invoke_constructors.template operator()<Components>(), ...);
+
+                auto invoke_on_add = [&]<typename C>() {
+                    if constexpr (HasOnAdd<C>) {
+                        C::onAdd(*this, entity);
+                    }
+                };
+                (invoke_on_add.template operator()<Components>(), ...);
 
                 auto invoke_add = [&]<typename C>() {
                     if constexpr (HasRequiredComponents<C>) {
@@ -446,6 +484,15 @@ struct Required {
     }
 };
 
+
+struct Position : Required<GlobalPosition>, Vec2Reflect {
+    float x, y;
+
+    Position(const float x, const float y) : x(x), y(y) {
+    }
+};
+
+
 template<int>
 struct Interval {
     static Timer timer;
@@ -469,6 +516,12 @@ namespace ecs {
     template<typename... Components>
     EntityRef &&EntityRef::add() {
         world.add<Components...>(this->entity());
+        return std::move(*this);
+    }
+
+    template<typename Relation>
+    EntityRef &&EntityRef::relate(const Entity target) {
+        world.relate<Relation>(this->entity(), target);
         return std::move(*this);
     }
 
