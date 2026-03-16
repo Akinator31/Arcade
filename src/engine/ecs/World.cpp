@@ -12,17 +12,17 @@ namespace ecs {
     }
 
     World::~World() {
+        for (auto &[instance, unload, destroy]: this->loaded_plugins) {
+            if (instance) {
+                unload(instance, *this);
+                destroy(instance);
+            }
+        }
         for (auto &[systems]: this->phases) {
             for (auto &[id, qid, iter, value, run, destroy, condition]: systems) {
                 if (destroy) {
                     destroy(value);
                 }
-            }
-        }
-        for (auto &[instance, unload, destroy]: this->loaded_plugins) {
-            if (instance) {
-                unload(instance, *this);
-                destroy(instance);
             }
         }
     }

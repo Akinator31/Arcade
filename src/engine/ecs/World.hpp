@@ -531,6 +531,10 @@ namespace ecs {
         return std::move(*this);
     }
 
+    inline EntityRef EntityRef::child() const {
+        return this->world.create().relate<Hierarchy>(this->entity());
+    }
+
     template<typename Event, typename Func>
     EntityRef &&EntityRef::listen(Func &&func) {
         this->world.listen<Event>(this->entity(), func);

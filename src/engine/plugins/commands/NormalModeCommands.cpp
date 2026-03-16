@@ -24,14 +24,18 @@ namespace cli::normal_mode_commands {
 
     CliPlugin::CommandHandler roots() {
         return [](CliPlugin &, CliSession &, ecs::World &world, Scanner &, std::ostream &output) {
-            world.fetch<Name>().iter([&](ArchetypeView &view) {
-                const auto *names = view.column<Name>();
+            world.fetch<>().iter([&](ArchetypeView &view) {
+                const auto *names = view.optional<Name>();
                 for (uint i = 0; i < view.count(); i++) {
                     const ecs::Entity entity = view.entity(i);
                     if (world.has<Parent>(entity)) {
                         continue;
                     }
-                    output << names[i].value << "\n";
+                    if (names != nullptr) {
+                        output << names[i].value << "\n";
+                    } else {
+                        output << world.makeEntityName(entity) << "\n";
+                    }
                 }
             });
         };

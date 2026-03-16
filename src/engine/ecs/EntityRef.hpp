@@ -19,6 +19,8 @@ namespace ecs {
         template<typename... Components>
         EntityRef &&set(Components... value);
 
+        [[nodiscard]] EntityRef child() const;
+
         template<typename Relation>
         EntityRef &&relate(Entity target);
 

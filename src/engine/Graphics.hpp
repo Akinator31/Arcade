@@ -58,9 +58,11 @@ struct Color {
     uint8_t a;
 
     rayflect(value, {
-             }
-
-    )
+             value->member<uint8_t>("r");
+             value->member<uint8_t>("g");
+             value->member<uint8_t>("b");
+             value->member<uint8_t>("a");
+             })
 };
 
 struct Node {
@@ -69,11 +71,16 @@ struct Node {
     float borderWidth;
 };
 
+
 struct GlobalPosition : Vec2Reflect {
     float x;
     float y;
 };
 
+struct Velocity : Vec2Reflect {
+    float x;
+    float y;
+};
 
 struct ImageHandle {
     uint32_t handle;
@@ -81,7 +88,6 @@ struct ImageHandle {
 
 struct FontHandle {
     uint32_t handle;
-    uint32_t size;
 };
 
 struct SpriteRect {
@@ -190,8 +196,8 @@ public:
 
     [[nodiscard]] virtual bool wasMouseButtonReleased(int button) const = 0;
 
-    virtual void drawRect(GlobalPosition pos, Vec2 size, Color color) = 0;
+    virtual void drawRect(GlobalPosition pos, Size size, Color color) = 0;
 
-    virtual void drawRectOutline(GlobalPosition pos, Vec2 size, Color fillColor, Color outlineColor,
+    virtual void drawRectOutline(GlobalPosition pos, Size size, Color fillColor, Color outlineColor,
                                  float outlineThickness) = 0;
 };

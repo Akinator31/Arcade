@@ -9,15 +9,6 @@
 #include "engine/ecs/World.hpp"
 #include "engine/plugins/CliPlugin.hpp"
 
-struct Position {
-    float x, y;
-
-    rayflect(Position,
-             Position->member<float>("x");
-             Position->member<float>("y");
-    )
-};
-
 struct Enemy;
 
 void redirect_all_stdout() {
@@ -197,6 +188,19 @@ Test(cli, normal_roots_without_children, .init = redirect_all_stdout) {
 
     fflush(stdout);
     cr_assert_stdout_eq_str("enemy\nplayer\nsasa\n");
+}
+
+Test(cli, normal_roots_without_names, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    const ecs::Entity root = world.create().id();
+    world.create().relate<Hierarchy>(root);
+
+    cli.progress(world, "roots");
+
+    fflush(stdout);
+    cr_assert_stdout_eq_str((world.makeEntityName(root) + "\n").c_str());
 }
 
 Test(cli, entity_exit, .init = redirect_all_stdout) {

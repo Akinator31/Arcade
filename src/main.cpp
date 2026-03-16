@@ -1,8 +1,11 @@
 #include <bits/this_thread_sleep.h>
 #include "engine/Graphics.hpp"
+#include "engine/dynamic/DynamicLoader.hpp"
+#include "engine/dynamic/Loader.hpp"
 #include "engine/ecs/World.hpp"
 #include "engine/plugins/CliPlugin.hpp"
-
+#include "engine/plugins/render/PositionPropagationPlugin.hpp"
+#include "engine/plugins/render/RenderPlugin.hpp"
 
 struct NoIntegrate;
 
@@ -16,20 +19,34 @@ enum class GameState {
 struct Player;
 struct Enemy;
 
+
 int main() {
     ecs::World world;
 
-    world.relation<Hierarchy>();
+    GraphicsApiLoader graphicsLoader("./libsfml_api.so");
 
-    world.create().add<Position, Enemy>().set(Name{"enemy"});
-    const auto player = world.create().add<Player>().set(Name{"player"}, Position{10., 1.});
-    world.create().add<Position, Player>().set(Name{"child"}).relate<Hierarchy>(player.id());
+    GraphicsApi *api = graphicsLoader.call<Create>();
+    api->init();
+
+    world.create().set(
+        Size{100, 100},
+        Position{100, 100},
+        Color{255, 0, 0, 255},
+        Name{"Parent"}
+    ).child().set(Size{100, 100},
+                  Position{100, 100},
+                  Color{255, 0, 0, 255}, Name{"Child"});
 
     world.plugin<CliPlugin>(CliMode::Server, 4040);
+    world.plugin<PositionPropagationPlugin>();
+    world.plugin<RenderPlugin>();
 
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    world.singleton_init<GraphicsApi>(api);
+
+    while (api->isWindowOpen()) {
+        api->beginFrame();
         world.progress();
+        api->endFrame();
     }
     return 0;
 }
