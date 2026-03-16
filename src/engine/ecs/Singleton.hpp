@@ -18,6 +18,12 @@ public:
     }
 
     template<typename T>
+    void singleton_init(T *defaultValue) {
+        const auto value = static_cast<void *>(defaultValue);
+        data.set(SingletonCounter::id<T>(), value);
+    }
+
+    template<typename T>
     T *singleton_get() {
         return static_cast<T *>(data.get(SingletonCounter::id<T>()));
     }

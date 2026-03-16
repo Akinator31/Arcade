@@ -9,15 +9,6 @@
 #include "engine/ecs/World.hpp"
 #include "engine/plugins/CliPlugin.hpp"
 
-struct Position {
-    float x, y;
-
-    rayflect(Position,
-             Position->member<float>("x");
-             Position->member<float>("y");
-    )
-};
-
 struct Enemy;
 
 void redirect_all_stdout() {
@@ -94,8 +85,7 @@ Test(cli, normal_entities, .init = redirect_all_stdout) {
     CliPlugin cli;
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Player1";
+    world.set<Name>(e1, Name{"Player1"});
 
     cli.progress(world, "entities");
 
@@ -129,8 +119,7 @@ Test(cli, normal_delete, .init = redirect_all_stdout) {
     CliPlugin cli;
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Player1";
+    world.set<Name>(e1, Name{"Player1"});
 
     cli.progress(world, "delete Player1");
     cli.progress(world, "entities");
@@ -145,8 +134,7 @@ Test(cli, normal_inspect_success, .init = redirect_all_stdout) {
     CliPlugin cli;
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Player1";
+    world.set<Name>(e1, Name{"Player1"});
 
     cr_assert(cli.session.state == CliState::Normal);
     cli.progress(world, "inspect Player1");
@@ -160,12 +148,59 @@ Test(cli, normal_inspect_fail, .init = redirect_all_stdout) {
     CliPlugin cli;
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Player1";
+    world.set<Name>(e1, Name{"Player1"});
 
     cr_assert(cli.session.state == CliState::Normal);
     cli.progress(world, "inspect Player2");
     cr_assert(cli.session.state == CliState::Normal);
+}
+
+Test(cli, normal_roots, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    const ecs::Entity root = world.entity();
+    const ecs::Entity child = world.entity();
+    const ecs::Entity leaf = world.entity();
+
+    world.set<Name>(root, Name{"Root"});
+    world.set<Name>(child, Name{"Child"});
+    world.set<Name>(leaf, Name{"Leaf"});
+
+    world.relate<Hierarchy>(child, root);
+    world.relate<Hierarchy>(leaf, child);
+
+    cli.progress(world, "roots");
+
+    fflush(stdout);
+    cr_assert_stdout_eq_str("Root\n");
+}
+
+Test(cli, normal_roots_without_children, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    world.create().set(Name{"enemy"});
+    world.create().set(Name{"player"});
+    world.create().set(Name{"sasa"});
+
+    cli.progress(world, "roots");
+
+    fflush(stdout);
+    cr_assert_stdout_eq_str("enemy\nplayer\nsasa\n");
+}
+
+Test(cli, normal_roots_without_names, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    const ecs::Entity root = world.create().id();
+    world.create().relate<Hierarchy>(root);
+
+    cli.progress(world, "roots");
+
+    fflush(stdout);
+    cr_assert_stdout_eq_str((world.makeEntityName(root) + "\n").c_str());
 }
 
 Test(cli, entity_exit, .init = redirect_all_stdout) {
@@ -185,8 +220,7 @@ Test(cli, entity_ls, .init = redirect_all_stdout) {
     world.component_registry.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Player1";
+    world.set<Name>(e1, Name{"Player1"});
     world.add<Position>(e1);
 
     cli.session.state = CliState::Normal;
@@ -199,6 +233,31 @@ Test(cli, entity_ls, .init = redirect_all_stdout) {
     cr_assert_stdout_neq_str("");
 }
 
+Test(cli, entity_children, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    const ecs::Entity root = world.entity();
+    const ecs::Entity child1 = world.entity();
+    const ecs::Entity child2 = world.entity();
+    const ecs::Entity grandchild = world.entity();
+
+    world.set<Name>(root, Name{"Root"});
+    world.set<Name>(child1, Name{"Child1"});
+    world.set<Name>(child2, Name{"Child2"});
+    world.set<Name>(grandchild, Name{"Grandchild"});
+
+    world.relate<Hierarchy>(child1, root);
+    world.relate<Hierarchy>(child2, root);
+    world.relate<Hierarchy>(grandchild, child1);
+
+    cli.progress(world, "inspect Root");
+    cli.progress(world, "children");
+
+    fflush(stdout);
+    cr_assert_stdout_eq_str("Child1\nChild2\n");
+}
+
 Test(cli, entity_print, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
@@ -207,8 +266,7 @@ Test(cli, entity_print, .init = redirect_all_stdout) {
     world.component_registry.registerComponent<Name>();
 
     ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Player1";
+    world.set<Name>(e1, Name{"Player1"});
     world.add<Position>(e1);
     world.get<Position>(e1)->x = 10.0f;
     world.get<Position>(e1)->y = 20.0f;
@@ -234,8 +292,7 @@ Test(cli, entity_set, .init = redirect_all_stdout) {
     world.component_registry.registerComponent<Name>();
 
     ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Player1";
+    world.set<Name>(e1, Name{"Player1"});
     world.add<Position>(e1);
     world.get<Position>(e1)->x = 10.0f;
     world.get<Position>(e1)->y = 20.0f;
@@ -260,8 +317,7 @@ Test(cli, entity_add, .init = redirect_all_stdout) {
     world.component_registry.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Player1";
+    world.set<Name>(e1, Name{"Player1"});
 
     cli.session.state = CliState::Normal;
     cli.progress(world, "inspect Player1");
@@ -277,8 +333,7 @@ Test(cli, entity_add_missing_component, .init = redirect_all_stdout) {
     world.component_registry.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Player1";
+    world.set<Name>(e1, Name{"Player1"});
 
     cli.session.state = CliState::Normal;
     cli.progress(world, "inspect Player1");
@@ -296,8 +351,7 @@ Test(cli, entity_remove, .init = redirect_all_stdout) {
     world.component_registry.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Player1";
+    world.set<Name>(e1, Name{"Player1"});
     world.add<Position>(e1);
 
     cli.session.state = CliState::Normal;
@@ -314,8 +368,7 @@ Test(cli, entity_remove_missing_component, .init = redirect_all_stdout) {
     world.component_registry.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Player1";
+    world.set<Name>(e1, Name{"Player1"});
 
     cli.session.state = CliState::Normal;
     cli.progress(world, "inspect Player1");
@@ -333,8 +386,7 @@ Test(cli, entity_remove_incomplete_tag, .init = redirect_all_stdout) {
     world.component_registry.registerComponent<Enemy>();
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Player1";
+    world.set<Name>(e1, Name{"Player1"});
     world.add<Enemy>(e1);
 
     cr_assert(world.has<Enemy>(e1));
@@ -353,8 +405,7 @@ Test(cli, entity_print_name, .init = redirect_all_stdout) {
     world.component_registry.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Hero";
+    world.set<Name>(e1, Name{"Hero"});
 
     cli.session.state = CliState::Normal;
     cli.progress(world, "inspect Hero");
@@ -396,8 +447,7 @@ Test(cli, server_execute_returns_output_and_prompt) {
     world.component_registry.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Hero";
+    world.set<Name>(e1, Name{"Hero"});
 
     const std::string entities = cli.execute(world, "entities");
     cr_assert_str_eq(entities.c_str(), "Hero\n> ");
@@ -439,8 +489,7 @@ Test(cli, server_mode_serves_prompt_and_commands) {
     world.component_registry.registerComponent<Name>();
 
     const ecs::Entity e1 = world.entity();
-    world.add<Name>(e1);
-    world.get<Name>(e1)->value = "Hero";
+    world.set<Name>(e1, Name{"Hero"});
 
     world.plugin<CliPlugin>(CliMode::Server, port);
 

@@ -58,11 +58,11 @@ std::string Scanner::take_identifier() {
         return {};
     }
 
-    std::string content = this->take_while([](char c) { return isalnum(c) || c == '_'; });
+    std::string content = this->take_while([](char c) { return isalnum(c) || c == '_' || c == '<' || c == '>'; });
     return content;
 }
 
-int Scanner::expect(char value) const {
+int Scanner::expect(const char value) const {
     return this->peek() == value;
 }
 

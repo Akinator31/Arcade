@@ -4,10 +4,6 @@
 
 #include "engine/ecs/Query.hpp"
 
-struct Position {
-    float x, y;
-};
-
 struct Velocity : Position {
 };
 
@@ -73,5 +69,4 @@ Test(ecs, query) {
 
     cr_assert_eq(world.get<Position>(entity)->x, 20);
 }
-
 

@@ -63,6 +63,10 @@ struct With {
     static void add_removed_components(ecs::internal::Archetype &arch, ObserverFunc func) {
         (arch.columns.get(reflection::type_id<Components>()).onRemove.push_back(func), ...);
     }
+
+    static void remove_removed_components(ecs::internal::Archetype &arch, ObserverFunc func) {
+        (arch.columns.get(reflection::type_id<Components>()).onRemove.remove(func), ...);
+    }
 };
 
 struct Add {

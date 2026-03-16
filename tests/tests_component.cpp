@@ -1,5 +1,6 @@
 #include "engine/ecs/World.hpp"
 #include <criterion/criterion.h>
+#include <stdexcept>
 
 
 Test(component, default_constructor) {
@@ -47,4 +48,49 @@ Test(component, required) {
     world.add<Clicked>(player);
     cr_assert(world.has<Hovered>(player));
     cr_assert(world.has<Clicked>(player));
+}
+
+Test(component, name_default_on_add) {
+    ecs::World world;
+
+    const ecs::Entity entity = world.entity();
+    world.add<Name>(entity);
+
+    const std::string expected = "entity(" + std::to_string(entity.index) + ", " + std::to_string(entity.generation) +
+                                 ")";
+    cr_assert_str_eq(world.get<Name>(entity)->value, expected.c_str());
+
+    const auto found = world.findEntityByName(expected);
+    cr_assert(found.has_value());
+    cr_assert(found.value() == entity);
+}
+
+Test(component, name_rejects_invalid_identifier) {
+    bool thrown = false;
+
+    try {
+        static_cast<void>(Name{"1invalid"});
+    } catch (const std::invalid_argument &) {
+        thrown = true;
+    }
+
+    cr_assert(thrown);
+}
+
+Test(component, name_must_be_unique) {
+    ecs::World world;
+
+    const ecs::Entity first = world.entity();
+    const ecs::Entity second = world.entity();
+
+    world.set<Name>(first, Name{"Player1"});
+
+    bool thrown = false;
+    try {
+        world.set<Name>(second, Name{"Player1"});
+    } catch (const std::invalid_argument &) {
+        thrown = true;
+    }
+
+    cr_assert(thrown);
 }

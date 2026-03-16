@@ -1,10 +1,6 @@
 #include "engine/ecs/World.hpp"
 #include <criterion/criterion.h>
 
-struct Position {
-    float x, y;
-};
-
 struct Velocity {
     float dx, dy;
 };

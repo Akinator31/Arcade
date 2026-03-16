@@ -55,7 +55,7 @@ namespace ecs::internal {
                 this->registerComponent(reflection::type_id<T>(), reflection::ecs_sizeof<T>(), nullptr);
             }
 
-            const char* name = type_name<T>();
+            const char *name = type_name<T>();
             this->components[reflection::type_id<T>()].name = name;
             if (name) {
                 this->name_to_id[name] = reflection::type_id<T>();

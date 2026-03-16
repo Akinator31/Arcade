@@ -17,6 +17,12 @@ public:
             const void* member_ptr = static_cast<const char*>(ptr) + m.offset;
             
             switch (m.type) {
+                case PrimitiveType::u8:
+                    oss << static_cast<uint32_t>(*static_cast<const uint8_t*>(member_ptr));
+                    break;
+                case PrimitiveType::u16:
+                    oss << *static_cast<const uint16_t*>(member_ptr);
+                    break;
                 case PrimitiveType::f32:
                     oss << *static_cast<const float*>(member_ptr);
                     break;

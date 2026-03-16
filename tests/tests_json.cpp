@@ -22,6 +22,16 @@ struct TestStructStr {
     )
 };
 
+struct TestStructSmallUnsigned {
+    uint8_t flags;
+    uint16_t id;
+
+    rayflect(TestStructSmallUnsigned,
+             TestStructSmallUnsigned->member<uint8_t>("flags");
+             TestStructSmallUnsigned->member<uint16_t>("id");
+    )
+};
+
 Test(json_serializer, serialize_struct) {
     constexpr TestStruct t{1.5f, -42, 100};
 
@@ -55,6 +65,19 @@ Test(json_serializer, serialize_null_string) {
 
     const auto expected = "{\n"
             "  \"name\": null\n"
+            "}";
+
+    cr_assert_eq(json, expected, "Expected:\n%s\nGot:\n%s", expected, json.c_str());
+}
+
+Test(json_serializer, serialize_small_unsigned_types) {
+    constexpr TestStructSmallUnsigned t{12, 513};
+
+    const std::string json = JsonSerializer::serialize(*TestStructSmallUnsigned::def(), &t);
+
+    const auto expected = "{\n"
+            "  \"flags\": 12,\n"
+            "  \"id\": 513\n"
             "}";
 
     cr_assert_eq(json, expected, "Expected:\n%s\nGot:\n%s", expected, json.c_str());

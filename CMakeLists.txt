@@ -20,8 +20,29 @@ if (ENABLE_SANITIZERS)
     list(APPEND ARCADE_SANITIZER_LINK_OPTIONS -fsanitize=address,undefined)
 endif ()
 
-file(GLOB_RECURSE SRC_FILES "src/*.cpp")
+
+file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS "src/*.cpp")
 list(REMOVE_ITEM SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+
+find_package(SFML 2.5 REQUIRED COMPONENTS graphics window system)
+
+add_library(sfml_api SHARED
+        platforms/SfmlApi.cpp
+        platforms/SfmlApi.hpp
+)
+target_include_directories(sfml_api
+        PUBLIC
+        src
+        platforms
+)
+target_link_libraries(sfml_api
+        PRIVATE
+        sfml-graphics
+        sfml-window
+        sfml-system
+)
+target_compile_options(sfml_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+target_link_options(sfml_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
 
 add_executable(arcade ${SRC_FILES} src/main.cpp
         src/engine/ecs/Query.hpp
@@ -38,10 +59,16 @@ add_executable(arcade ${SRC_FILES} src/main.cpp
         src/engine/plugins/EntityMode.cpp
         src/engine/ecs/Singleton.hpp
         src/engine/plugins/CliPlugin.cpp
+        src/engine/dynamic/DynamicLoader.hpp
+        src/engine/dynamic/Loader.hpp
+        src/engine/plugins/render/RenderPlugin.hpp
+        src/engine/IEngine.hpp
 )
 target_include_directories(arcade PRIVATE include src)
 target_compile_options(arcade PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
 target_link_options(arcade PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+target_link_libraries(arcade PRIVATE dl)
+
 
 # TEST CRITERION
 
@@ -52,9 +79,9 @@ if (BUILD_TESTS)
     find_library(CRITERION_LIB criterion)
 
     if (CRITERION_LIB)
-        file(GLOB_RECURSE LIB_SRC "src/*.cpp")
+        file(GLOB_RECURSE LIB_SRC CONFIGURE_DEPENDS "src/*.cpp")
         list(FILTER LIB_SRC EXCLUDE REGEX "src/main\\.cpp$")
-        file(GLOB_RECURSE TEST_SRC "tests/*.cpp")
+        file(GLOB_RECURSE TEST_SRC CONFIGURE_DEPENDS "tests/*.cpp")
 
         add_executable(unittests ${LIB_SRC} ${TEST_SRC}
                 tests/tests_ecs.cpp
@@ -67,7 +94,8 @@ if (BUILD_TESTS)
                 tests/tests_relation.cpp
                 tests/tests_rayflect.cpp
                 tests/tests_cli.cpp
-                tests/tests_json.cpp)
+                tests/tests_json.cpp
+                tests/tests_transform_propagation.cpp)
 
         target_compile_options(unittests PRIVATE
                 ${ARCADE_COMMON_COMPILE_OPTIONS}

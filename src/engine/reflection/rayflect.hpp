@@ -6,6 +6,8 @@
 
 
 enum class PrimitiveType : int8_t {
+    u8,
+    u16,
     u32,
     u64,
     i32,
@@ -19,6 +21,8 @@ struct Primitive {
     PrimitiveType type;
 
     union {
+        uint8_t u8;
+        uint16_t u16;
         uint32_t u32;
         uint64_t u64;
         int32_t i32;
@@ -30,7 +34,8 @@ struct Primitive {
 
 #define methode(name, type) static Primitive name(const type value) { return {PrimitiveType::name, {.name = value}}; }
 
-
+    methode(u8, uint8_t)
+    methode(u16, uint16_t)
     methode(f32, float)
     methode(f64, double)
     methode(i32, int32_t)
@@ -73,7 +78,9 @@ public:
         m.size = sizeof(T);
         m.align = alignof(T);
 
-        if constexpr (std::is_same_v<T, float>) m.type = PrimitiveType::f32;
+        if constexpr (std::is_same_v<T, uint8_t>) m.type = PrimitiveType::u8;
+        else if constexpr (std::is_same_v<T, uint16_t>) m.type = PrimitiveType::u16;
+        else if constexpr (std::is_same_v<T, float>) m.type = PrimitiveType::f32;
         else if constexpr (std::is_same_v<T, double>) m.type = PrimitiveType::f64;
         else if constexpr (std::is_same_v<T, int>) m.type = PrimitiveType::i32;
         else if constexpr (std::is_same_v<T, long>) m.type = PrimitiveType::i64;
@@ -119,6 +126,12 @@ public:
 
         try {
             switch (m->type) {
+                case PrimitiveType::u8:
+                    *static_cast<uint8_t*>(member_ptr) = static_cast<uint8_t>(std::stoul(value));
+                    break;
+                case PrimitiveType::u16:
+                    *static_cast<uint16_t*>(member_ptr) = static_cast<uint16_t>(std::stoul(value));
+                    break;
                 case PrimitiveType::f32:
                     *static_cast<float*>(member_ptr) = std::stof(value);
                     break;
