@@ -80,6 +80,11 @@ struct GlobalPosition : Vec2Reflect {
 struct Velocity : Vec2Reflect {
     float x;
     float y;
+
+    Velocity() = default;
+
+    Velocity(const float x, const float y) : x(x), y(y) {
+    }
 };
 
 struct ImageHandle {

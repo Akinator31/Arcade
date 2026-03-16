@@ -16,9 +16,12 @@ namespace ecs {
 
 namespace ecs::internal {
     struct ComponentRecord {
+        bool registered = false;
         std::size_t size = 0;
         std::vector<ecs::ArchetypeID> archetypes;
         std::vector<ecs::ComponentID> required;
+
+        void (*construct)(World &, Entity) = nullptr;
 
         void (*onAdd)(World &, Entity) = nullptr;
 
@@ -35,6 +38,8 @@ namespace ecs::internal {
         std::unordered_map<std::string, ecs::ComponentID> name_to_id;
 
         [[nodiscard]] std::size_t getSize(ecs::ComponentID cid) const;
+
+        [[nodiscard]] bool isRegistered(ecs::ComponentID cid) const;
 
         void registerComponent(ecs::ComponentID cid, std::size_t size, StructDef *def = nullptr);
 

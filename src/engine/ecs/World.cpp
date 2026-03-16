@@ -8,6 +8,7 @@ namespace ecs {
         [[maybe_unused]] auto archeId =
                 this->findOrCreateArchetype({});
 
+        this->registerComponent<Name>();
         this->relation<Hierarchy>();
     }
 
@@ -74,6 +75,12 @@ namespace ecs {
     }
 
     bool World::add_id(const Entity entity, const ComponentID cid) {
+#ifndef NDEBUG
+        if (!this->component_registry.isRegistered(cid)) {
+            throw std::logic_error("component not registered");
+        }
+#endif
+
         const auto &record = this->entity_registry.getRecord(entity);
         const auto &arch = this->archetype_registry.getArchetype(record.archetypeId);
 
@@ -93,6 +100,9 @@ namespace ecs {
                     .addEdge.set(cid, newArchId);
         }
         this->migrate(entity, newArchId);
+        this->constructComponent(entity, cid);
+        this->runOnAdd(entity, cid);
+        this->addRequiredComponents(entity, cid);
         return true;
     }
 
@@ -102,9 +112,15 @@ namespace ecs {
 
 
         EntityType newType = arch.getType().clone();
+        std::vector<ComponentID> added;
+        added.reserve(count);
         for (uint32_t i = 0; i < count; i++) {
+            if (!this->component_registry.isRegistered(cid[i])) {
+                throw std::logic_error("component not registered");
+            }
             if (!arch.has(cid[i])) {
                 newType.add(cid[i]);
+                added.push_back(cid[i]);
             }
         }
 
@@ -114,7 +130,37 @@ namespace ecs {
 
         const ArchetypeID newArchId = this->findOrCreateArchetype(std::move(newType));
         this->migrate(entity, newArchId);
+        for (const ComponentID added_cid: added) {
+            this->constructComponent(entity, added_cid);
+        }
+        for (const ComponentID added_cid: added) {
+            this->runOnAdd(entity, added_cid);
+        }
+        for (const ComponentID added_cid: added) {
+            this->addRequiredComponents(entity, added_cid);
+        }
         return true;
+    }
+
+    void World::constructComponent(const Entity entity, const ComponentID cid) {
+        const auto &record = this->component_registry.getRecord(cid);
+        if (record.construct != nullptr) {
+            record.construct(*this, entity);
+        }
+    }
+
+    void World::runOnAdd(const Entity entity, const ComponentID cid) {
+        const auto &record = this->component_registry.getRecord(cid);
+        if (record.onAdd != nullptr) {
+            record.onAdd(*this, entity);
+        }
+    }
+
+    void World::addRequiredComponents(const Entity entity, const ComponentID cid) {
+        const auto &record = this->component_registry.getRecord(cid);
+        for (const ComponentID required_cid: record.required) {
+            this->add_id(entity, required_cid);
+        }
     }
 
     void World::remove_id(const Entity entity, const ComponentID cid) {

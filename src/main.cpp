@@ -3,9 +3,10 @@
 #include "engine/dynamic/DynamicLoader.hpp"
 #include "engine/dynamic/Loader.hpp"
 #include "engine/ecs/World.hpp"
-#include "engine/plugins/CliPlugin.hpp"
-#include "engine/plugins/render/PositionPropagationPlugin.hpp"
-#include "engine/plugins/render/RenderPlugin.hpp"
+#include "engine/plugins/cli/CliPlugin.hpp"
+#include "engine/plugins/core_components/CoreComponentsPlugin.hpp"
+#include "engine/plugins/render/PositionPropagationPlugin/PositionPropagationPlugin.hpp"
+#include "engine/plugins/render/RenderPlugin/RenderPlugin.hpp"
 
 struct NoIntegrate;
 
@@ -20,6 +21,20 @@ struct Player;
 struct Enemy;
 
 
+struct SpriteAnimation {
+    Timer timer;
+    uint8_t start{};
+    uint8_t end{};
+    uint8_t index{};
+};
+
+struct SpriteAtlas {
+    uint16_t tile_width;
+    uint16_t tile_height;
+    uint16_t rows;
+    uint16_t cols;
+};
+
 int main() {
     ecs::World world;
 
@@ -27,6 +42,11 @@ int main() {
 
     GraphicsApi *api = graphicsLoader.call<Create>();
     api->init();
+
+    world.plugin<CoreComponentsPlugin>();
+    world.plugin<CliPlugin>(CliMode::Server, 4040);
+    world.plugin<PositionPropagationPlugin>();
+    world.plugin<RenderPlugin>();
 
     world.create().set(
         Size{100, 100},
@@ -36,10 +56,6 @@ int main() {
     ).child().set(Size{100, 100},
                   Position{100, 100},
                   Color{255, 0, 0, 255}, Name{"Child"});
-
-    world.plugin<CliPlugin>(CliMode::Server, 4040);
-    world.plugin<PositionPropagationPlugin>();
-    world.plugin<RenderPlugin>();
 
     world.singleton_init<GraphicsApi>(api);
 

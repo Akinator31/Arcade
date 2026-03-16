@@ -1,5 +1,5 @@
 #include "engine/ecs/World.hpp"
-#include "engine/plugins/render/PositionPropagationPlugin.hpp"
+#include "engine/plugins/render/PositionPropagationPlugin/PositionPropagationPlugin.hpp"
 #include <criterion/criterion.h>
 
 Test(position_propagation_plugin, propagates_local_positions_through_hierarchy) {

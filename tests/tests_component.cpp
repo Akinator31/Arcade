@@ -15,6 +15,7 @@ Test(component, default_constructor) {
 
     const ecs::Entity player = world.entity();
 
+    world.registerComponent<Position>();
     world.add<Position>(player);
 
     cr_assert_eq(world.get<Position>(player)->x, 10);
@@ -28,6 +29,7 @@ Test(component, default_constructor) {
         }
     };
 
+    world.registerComponent<Health>();
     world.add<Health>(player);
 
     cr_assert_eq(world.get<Health>(player)->count, player.index + 1);
@@ -45,6 +47,7 @@ Test(component, required) {
 
     const ecs::Entity player = world.entity();
 
+    world.registerComponent<Clicked>();
     world.add<Clicked>(player);
     cr_assert(world.has<Hovered>(player));
     cr_assert(world.has<Clicked>(player));
@@ -54,6 +57,7 @@ Test(component, name_default_on_add) {
     ecs::World world;
 
     const ecs::Entity entity = world.entity();
+    world.registerComponent<Name>();
     world.add<Name>(entity);
 
     const std::string expected = "entity(" + std::to_string(entity.index) + ", " + std::to_string(entity.generation) +
@@ -83,6 +87,7 @@ Test(component, name_must_be_unique) {
     const ecs::Entity first = world.entity();
     const ecs::Entity second = world.entity();
 
+    world.registerComponent<Name>();
     world.set<Name>(first, Name{"Player1"});
 
     bool thrown = false;

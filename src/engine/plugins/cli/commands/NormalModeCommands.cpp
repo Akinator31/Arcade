@@ -2,7 +2,7 @@
 
 namespace cli::normal_mode_commands {
     CliPlugin::CommandHandler ls() {
-        return [](CliPlugin &, CliSession &, ecs::World &world, Scanner &, std::ostream &output) {
+        return [](CliPlugin &, CliSession &, const ecs::World &world, Scanner &, std::ostream &output) {
             for (const auto &comp: world.component_registry.components) {
                 if (comp.name) {
                     output << comp.name << "\n";
@@ -76,6 +76,12 @@ namespace cli::normal_mode_commands {
                 session.inspected_entity = entity.value();
                 session.state = CliState::Entity;
             }
+        };
+    }
+
+    CliPlugin::CommandHandler progress() {
+        return [](CliPlugin &, CliSession &, ecs::World &world, Scanner &, std::ostream &) {
+            world.progress();
         };
     }
 }

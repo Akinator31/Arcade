@@ -53,15 +53,15 @@ add_executable(arcade ${SRC_FILES} src/main.cpp
         src/engine/Graphics.hpp
         src/engine/ecs/State.hpp
         src/engine/reflection/rayflect.hpp
-        src/engine/plugins/CliPlugin.hpp
+        src/engine/plugins/cli/CliPlugin.hpp
         src/engine/parsing/Scanner.cpp
-        src/engine/plugins/NormalMode.cpp
-        src/engine/plugins/EntityMode.cpp
+        src/engine/plugins/cli/NormalMode.cpp
+        src/engine/plugins/cli/EntityMode.cpp
         src/engine/ecs/Singleton.hpp
-        src/engine/plugins/CliPlugin.cpp
+        src/engine/plugins/cli/CliPlugin.cpp
         src/engine/dynamic/DynamicLoader.hpp
         src/engine/dynamic/Loader.hpp
-        src/engine/plugins/render/RenderPlugin.hpp
+        src/engine/plugins/render/RenderPlugin/RenderPlugin.hpp
         src/engine/IEngine.hpp
 )
 target_include_directories(arcade PRIVATE include src)
