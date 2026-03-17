@@ -21,15 +21,16 @@ jobs:
             cmake g++ build-essential libcriterion-dev \
             libx11-dev libxrandr-dev libudev-dev \
             libxcursor-dev libxi-dev libxinerama-dev \
-            libopengl-dev libflac-dev libogg-dev \
-            libvorbis-dev libopenal-dev libfreetype-dev
+            libgl-dev libegl-dev libopengl-dev \
+            libflac-dev libogg-dev libvorbis-dev \
+            libopenal-dev libfreetype-dev
 
       - name: Cache SFML 3
         id: cache-sfml
         uses: actions/cache@v4
         with:
           path: ./sfml-install
-          key: ${{ runner.os }}-sfml3-v1
+          key: ${{ runner.os }}-sfml3-shared-v2
 
       - name: Install SFML 3
         if: steps.cache-sfml.outputs.cache-hit != 'true'
@@ -39,6 +40,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=./sfml-install \
             -DSFML_BUILD_EXAMPLES=OFF \
             -DSFML_BUILD_TEST_SUITE=OFF \
+            -DBUILD_SHARED_LIBS=ON \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build SFML/build --target install
 
@@ -54,4 +56,7 @@ jobs:
 
       - name: Run Tests
         working-directory: build
-        run: ctest --output-on-failure
+        run: |
+          export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/sfml-install/lib:$LD_LIBRARY_PATH
+          
+          ./unittests

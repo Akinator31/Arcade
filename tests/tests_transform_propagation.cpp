@@ -2,6 +2,16 @@
 #include "engine/plugins/render/PositionPropagationPlugin/PositionPropagationPlugin.hpp"
 #include <criterion/criterion.h>
 
+Test(position_propagation_plugin, simple) {
+    ecs::World world;
+    world.plugin<PositionPropagationPlugin>();
+
+    auto a = world.create().set(Position{10, 10});
+    cr_assert_eq(world.get<GlobalPosition>(a.entity())->x, 0);
+    world.progress();
+    cr_assert_eq(world.get<GlobalPosition>(a.entity())->x, 10);
+}
+
 Test(position_propagation_plugin, propagates_local_positions_through_hierarchy) {
     ecs::World world;
     world.plugin<PositionPropagationPlugin>();

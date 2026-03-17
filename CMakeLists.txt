@@ -4,10 +4,11 @@ project(arcade LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# --- OPTIONS ---
 option(ENABLE_SANITIZERS "Build with sanitizers" OFF)
+option(BUILD_CORE_PROGRAM "Build the core arcade executable" ON)
 option(BUILD_PLATFORM_LIBS "Build platform dynamic libraries" ON)
 option(BUILD_TESTS "Build unit tests" ON)
+option(BUILD_GAMES "Build game dynamic libraries" ON)
 
 set(ARCADE_COMMON_COMPILE_OPTIONS -Wall -Wextra -Werror)
 set(ARCADE_SANITIZER_COMPILE_OPTIONS "")
@@ -23,24 +24,29 @@ if (ENABLE_SANITIZERS)
     list(APPEND ARCADE_SANITIZER_LINK_OPTIONS -fsanitize=address,undefined)
 endif ()
 
-# --- SOURCE FILES ---
-file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS "src/*.cpp")
-list(REMOVE_ITEM SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+file(GLOB_RECURSE ECS_SRC CONFIGURE_DEPENDS "ecs/*.cpp")
+file(GLOB_RECURSE TEST_SRC CONFIGURE_DEPENDS "tests/*.cpp")
 
-# --- SFML 3 ---
+add_library(arcade_shared INTERFACE)
+target_include_directories(arcade_shared INTERFACE shared ecs)
+
+if (BUILD_GAMES OR BUILD_TESTS)
+    add_library(arcade_ecs OBJECT ${ECS_SRC})
+    set_target_properties(arcade_ecs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_include_directories(arcade_ecs PUBLIC shared ecs)
+    target_compile_options(arcade_ecs PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+endif ()
+
 if (BUILD_PLATFORM_LIBS)
     find_package(SFML 3 REQUIRED COMPONENTS System Window Graphics)
 
     add_library(sfml_api SHARED
-            platforms/SfmlApi.cpp
-            platforms/SfmlApi.hpp
+            graphics/sfml/SfmlApi.cpp
+            graphics/sfml/SfmlApi.hpp
     )
 
-    target_include_directories(sfml_api
-            PUBLIC
-            src
-            platforms
-    )
+    target_include_directories(sfml_api PRIVATE shared graphics/sfml)
+    target_link_libraries(sfml_api PRIVATE arcade_shared)
 
     target_link_libraries(sfml_api
             PRIVATE
@@ -51,23 +57,33 @@ if (BUILD_PLATFORM_LIBS)
     target_link_options(sfml_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
 endif ()
 
-# --- MAIN EXECUTABLE ---
-add_executable(arcade ${SRC_FILES} src/main.cpp)
-target_include_directories(arcade PRIVATE include src)
-target_compile_options(arcade PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
-target_link_options(arcade PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
-target_link_libraries(arcade PRIVATE ${CMAKE_DL_LIBS})
+if (BUILD_CORE_PROGRAM)
+    add_executable(arcade core/main.cpp)
+    target_include_directories(arcade PRIVATE shared core)
+    target_compile_options(arcade PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    target_link_options(arcade PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+    target_link_libraries(arcade PRIVATE ${CMAKE_DL_LIBS})
+endif ()
 
+if (BUILD_GAMES)
+    add_library(game_example SHARED
+            games/example/ExampleGame.cpp
+            games/example/ExampleGame.hpp
+    )
+    target_sources(game_example PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
+    target_include_directories(game_example PRIVATE shared ecs games/example)
+    target_link_libraries(game_example PRIVATE arcade_shared)
+    target_compile_options(game_example PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    target_link_options(game_example PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+endif ()
 
-# --- TESTS ---
 if (BUILD_TESTS)
     enable_testing()
     find_library(CRITERION_LIB criterion)
 
     if (CRITERION_LIB)
-        file(GLOB_RECURSE TEST_SRC CONFIGURE_DEPENDS "tests/*.cpp")
-
-        add_executable(unittests ${SRC_FILES} ${TEST_SRC})
+        add_executable(unittests ${TEST_SRC})
+        target_sources(unittests PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
 
         target_compile_options(unittests PRIVATE
                 ${ARCADE_COMMON_COMPILE_OPTIONS}
@@ -76,9 +92,8 @@ if (BUILD_TESTS)
         )
 
         target_link_options(unittests PRIVATE --coverage ${ARCADE_SANITIZER_LINK_OPTIONS})
-        target_include_directories(unittests PRIVATE include src)
-
-        target_link_libraries(unittests PRIVATE ${CRITERION_LIB} ${CMAKE_DL_LIBS})
+        target_include_directories(unittests PRIVATE shared ecs tests)
+        target_link_libraries(unittests PRIVATE arcade_shared ${CRITERION_LIB} ${CMAKE_DL_LIBS})
 
         add_test(NAME unittests COMMAND unittests)
     else ()
