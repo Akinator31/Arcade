@@ -6,7 +6,6 @@
 
 #include <criterion/criterion.h>
 
-#include "engine/Graphics.hpp"
 #include "engine/ecs/Query.hpp"
 
 struct Player {
