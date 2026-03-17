@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 void SfmlGraphicsApi::init() {
-    this->window.create({1920, 1080}, "game", sf::Style::Default);
+    this->window.create(sf::VideoMode::getDesktopMode(), "game", sf::Style::Default);
     this->window.setVerticalSyncEnabled(false);
     this->window.setFramerateLimit(120);
 }
@@ -19,22 +19,26 @@ bool SfmlGraphicsApi::isWindowOpen() {
 }
 
 void SfmlGraphicsApi::beginFrame() {
-    sf::Event event;
     this->mouseReleasedThisFrame = false;
 
-    while (this->window.pollEvent(event)) {
-        if (event.type == sf::Event::Closed) {
-            this->window.close();
+    while (const std::optional event = window.pollEvent()) {
+        if (event->is<sf::Event::Closed>()) {
+            window.close();
         }
-        if (event.type == sf::Event::MouseButtonReleased) {
+        if (const auto *keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+            if (keyPressed->scancode == sf::Keyboard::Scancode::Escape)
+                window.close();
+        }
+
+        if (event->is<sf::Event::MouseButtonReleased>()) {
             this->mouseReleasedThisFrame = true;
         }
-        if (event.type == sf::Event::Resized) {
-            sf::View v(sf::FloatRect(0.f, 0.f, static_cast<float>(event.size.width),
-                                     static_cast<float>(event.size.height)));
+        if (const auto *value = event->getIf<sf::Event::Resized>()) {
+            sf::View v(sf::FloatRect{{0, 0}, {static_cast<float>(value->size.x), static_cast<float>(value->size.y)}});
             window.setView(v);
         }
     }
+
 
     this->window.clear();
     this->deltaTime = this->clock.restart().asSeconds();
@@ -58,7 +62,7 @@ float SfmlGraphicsApi::getDeltaTime() const {
 }
 
 bool SfmlGraphicsApi::isKeyPressed(const KeyboardCode code) {
-    sf::Keyboard::Key sfmlCode = sf::Keyboard::Key::KeyCount;
+    auto sfmlCode = sf::Keyboard::Key::Unknown;
 
 #define key(name)                                                                                  \
     case KeyboardCode::name:                                                                       \
@@ -92,26 +96,26 @@ bool SfmlGraphicsApi::isKeyPressed(const KeyboardCode code) {
         key(X);
         key(Y);
         key(Z);
-        case KeyboardCode::ArrowLeft:
+        case ArrowLeft:
             sfmlCode = sf::Keyboard::Key::Left;
             break;
-        case KeyboardCode::ArrowRight:
+        case ArrowRight:
             sfmlCode = sf::Keyboard::Key::Right;
             break;
-        case KeyboardCode::ArrowUp:
+        case ArrowUp:
             sfmlCode = sf::Keyboard::Key::Up;
             break;
-        case KeyboardCode::ArrowDown:
+        case ArrowDown:
             sfmlCode = sf::Keyboard::Key::Down;
             break;
-        case KeyboardCode::Space:
+        case Space:
             sfmlCode = sf::Keyboard::Key::Space;
             break;
-        case KeyboardCode::F11:
+        case F11:
             sfmlCode = sf::Keyboard::Key::F11;
             break;
         default:
-            sfmlCode = sf::Keyboard::Key::KeyCount;
+            sfmlCode = sf::Keyboard::Key::Unknown;
     }
 #undef key
 
@@ -126,9 +130,9 @@ IVec2 SfmlGraphicsApi::getMousePosition() const {
 
 bool SfmlGraphicsApi::isMouseButtonPressed(const int button) const {
     if (button == 0)
-        return sf::Mouse::isButtonPressed(sf::Mouse::Left);
+        return sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
     if (button == 1)
-        return sf::Mouse::isButtonPressed(sf::Mouse::Right);
+        return sf::Mouse::isButtonPressed(sf::Mouse::Button::Right);
     return false;
 }
 
@@ -159,7 +163,7 @@ void SfmlGraphicsApi::drawRectOutline(GlobalPosition pos, Size size, const Color
 FontHandle SfmlGraphicsApi::loadFont(const std::string &path, const int size) {
     this->fonts.emplace_back();
     this->fonts.back().size = size;
-    if (!this->fonts.back().font.loadFromFile(path)) {
+    if (!this->fonts.back().font.openFromFile(path)) {
         this->fonts.pop_back();
         throw std::runtime_error("Failed to load font: " + path);
     }
@@ -178,7 +182,9 @@ void SfmlGraphicsApi::drawText(GlobalPosition pos, const FontHandle handle, cons
 
 ImageHandle SfmlGraphicsApi::loadImage(const std::string &path) {
     sf::Texture img;
-    img.loadFromFile(path);
+    if (!img.loadFromFile(path)) {
+        throw std::runtime_error(std::format("unable to load image  {}", path));
+    }
 
     this->images.push_back(std::move(img));
 
@@ -195,13 +201,13 @@ void SfmlGraphicsApi::drawSprite(const GlobalPosition pos, const Sprite &spr) {
 
     const float originX = static_cast<float>(spr.rect.width) / 2.f;
     const float originY = static_cast<float>(spr.rect.height) / 2.f;
-    this->sprite.setOrigin(originX, originY);
+    this->sprite.setOrigin({originX, originY});
 
     const float offsetX = originX * std::abs(spr.scale.x);
     const float offsetY = originY * std::abs(spr.scale.y);
-    this->sprite.setPosition(pos.x + offsetX, pos.y + offsetY);
+    this->sprite.setPosition({pos.x + offsetX, pos.y + offsetY});
 
-    this->sprite.setScale(spr.scale.x, spr.scale.y);
+    this->sprite.setScale({spr.scale.x, spr.scale.y});
     this->window.draw(this->sprite);
 }
 
