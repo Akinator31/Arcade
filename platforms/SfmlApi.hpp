@@ -3,15 +3,16 @@
 #include <SFML/Graphics.hpp>
 
 struct FontRecord {
-    int size;
+    int size{};
     sf::Font font;
 };
 
 class SfmlGraphicsApi : public GraphicsApi {
     sf::RenderWindow window;
     sf::RectangleShape rectShape;
-    sf::CircleShape circleShape;
     sf::Sprite sprite;
+    sf::Texture defaultTexture;
+    sf::Font defaultFont;
     std::vector<sf::Texture> images;
     std::vector<FontRecord> fonts;
     mutable sf::Text textShape;
@@ -20,6 +21,9 @@ class SfmlGraphicsApi : public GraphicsApi {
     bool mouseReleasedThisFrame = false;
 
 public:
+    SfmlGraphicsApi() : rectShape({0, 0}), sprite(defaultTexture), textShape(defaultFont) {
+    }
+
     void init() override;
 
     void shutdown() override;
