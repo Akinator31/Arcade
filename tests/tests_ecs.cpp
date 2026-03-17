@@ -32,6 +32,7 @@ Test(ecs, component) {
 
     const ecs::Entity entity = world.entity();
 
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
     world.add<Position>(entity);
     world.get<Position>(entity)->x = 10;
@@ -44,6 +45,7 @@ Test(ecs, query) {
     ecs::World world;
 
     const ecs::Entity entity = world.entity();
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
     world.add<Position>(entity);
 

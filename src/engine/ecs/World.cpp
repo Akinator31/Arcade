@@ -1,6 +1,7 @@
 #include "World.hpp"
 
 #include <algorithm>
+#include <format>
 #include <stdexcept>
 
 namespace ecs {
@@ -143,22 +144,20 @@ namespace ecs {
     }
 
     void World::constructComponent(const Entity entity, const ComponentID cid) {
-        const auto &record = this->component_registry.getRecord(cid);
-        if (record.construct != nullptr) {
-            record.construct(*this, entity);
+        if (const auto &record = this->component_registry.getRecord(cid); record.construct != nullptr) {
+            record.construct(*this, this->get_id(entity, cid));
         }
     }
 
     void World::runOnAdd(const Entity entity, const ComponentID cid) {
-        const auto &record = this->component_registry.getRecord(cid);
-        if (record.onAdd != nullptr) {
+        if (const auto &record = this->component_registry.getRecord(cid); record.onAdd != nullptr) {
             record.onAdd(*this, entity);
         }
     }
 
     void World::addRequiredComponents(const Entity entity, const ComponentID cid) {
-        const auto &record = this->component_registry.getRecord(cid);
-        for (const ComponentID required_cid: record.required) {
+        for (const auto &record = this->component_registry.getRecord(cid); const ComponentID required_cid: record.
+             required) {
             this->add_id(entity, required_cid);
         }
     }
@@ -231,19 +230,19 @@ namespace ecs {
     }
 
     Entity World::entity() {
-        return this->entity_registry.create();
+        const Entity entity = this->entity_registry.create();
+
+        const char *name = strdup(std::format("entity({}, {})", entity.index, entity.generation).c_str());
+        this->set(entity, Name(name));
+
+        return entity;
     }
 
     EntityRef World::create() {
-        return EntityRef(*this, this->entity_registry.create());
+        return EntityRef(*this, this->entity());
     }
 
-    const char *World::storeEntityName(const std::string &name) {
-        this->stored_entity_names.push_back(name);
-        return this->stored_entity_names.back().c_str();
-    }
-
-    std::string World::makeEntityName(const Entity entity) const {
+    std::string World::makeEntityName(const Entity entity) {
         return "entity(" + std::to_string(entity.index) + ", " + std::to_string(entity.generation) + ")";
     }
 
@@ -254,25 +253,24 @@ namespace ecs {
     }
 
     void World::syncEntityName(const Entity entity) {
-        Name *name = this->get<Name>(entity);
+        const Name *name = this->get<Name>(entity);
         if (name == nullptr) {
             return;
         }
 
         std::string value = name->value == nullptr ? "" : name->value;
         if (value.empty()) {
-            value = this->makeEntityName(entity);
+            value = ecs::World::makeEntityName(entity);
         }
 
-        Name validated_name(value.c_str());
+        const Name validated_name(value.c_str());
 
         if (const auto it = this->entity_name_to_entity.find(value);
-            it != this->entity_name_to_entity.end() && !(it->second == entity)) {
+            it != this->entity_name_to_entity.end() && it->second != entity) {
             throw std::invalid_argument("duplicate entity name");
         }
 
         this->clearEntityName(entity);
-        name->value = this->storeEntityName(validated_name.value);
         this->entity_name_to_entity[name->value] = entity;
     }
 

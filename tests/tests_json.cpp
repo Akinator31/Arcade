@@ -82,3 +82,33 @@ Test(json_serializer, serialize_small_unsigned_types) {
 
     cr_assert_eq(json, expected, "Expected:\n%s\nGot:\n%s", expected, json.c_str());
 }
+
+Test(json_serializer, serialize_default_value) {
+    struct DefaultStruct {
+        int32_t value;
+        const char *name;
+
+        DefaultStruct() : value(42), name("default") {
+        }
+
+        rayflect(DefaultStruct,
+                 DefaultStruct->member<int32_t>("value");
+                 DefaultStruct->member<const char *>("name");
+        )
+    };
+
+    const std::string json = JsonSerializer::serialize_default(
+        *DefaultStruct::def(),
+        sizeof(DefaultStruct),
+        [](void *ptr) {
+            *static_cast<DefaultStruct *>(ptr) = DefaultStruct();
+        }
+    );
+
+    const auto expected = "{\n"
+            "  \"value\": 42,\n"
+            "  \"name\": \"default\"\n"
+            "}";
+
+    cr_assert_eq(json, expected, "Expected:\n%s\nGot:\n%s", expected, json.c_str());
+}

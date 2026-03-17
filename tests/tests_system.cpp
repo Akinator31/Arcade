@@ -21,6 +21,7 @@ Test(system, basic_execution) {
     };
 
     ecs::World world;
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
     world.registerComponent<Velocity>();
 
@@ -140,6 +141,7 @@ Test(system, exclude_component) {
     };
 
     ecs::World world;
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
     world.registerComponent<Enemy>();
 
@@ -172,6 +174,7 @@ Test(system, multiple_archetypes) {
 
     ecs::World world;
     world.registerComponent<Velocity>();
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
     world.registerComponent<Player>();
     world.phase<Update>();
@@ -214,6 +217,7 @@ Test(system, different_phases) {
     };
 
     ecs::World world;
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
 
 
@@ -240,6 +244,7 @@ Test(system, remove_system) {
     };
 
     ecs::World world;
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
 
     world.system<SystemC>();

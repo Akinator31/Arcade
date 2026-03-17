@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <bits/this_thread_sleep.h>
 #include "engine/Graphics.hpp"
 #include "engine/dynamic/DynamicLoader.hpp"
@@ -51,12 +52,10 @@ int main() {
     world.create().set(
         Size{100, 100},
         Position{100, 100},
-        Color{255, 0, 0, 255},
-        Name{"Parent"}
+        Color{255, 0, 0, 255}
     ).child().set(Size{100, 100},
                   Position{100, 100},
-                  Color{255, 0, 0, 255}, Name{"Child"});
-
+                  Color{255, 0, 0, 255});
     world.singleton_init<GraphicsApi>(api);
 
     while (api->isWindowOpen()) {

@@ -81,7 +81,7 @@ std::string CliPlugin::execute(ecs::World &world, const std::string &input) {
 
 ecs::Entity CliPlugin::create_named_entity(ecs::World &world, const std::string &name) {
     const ecs::Entity entity = world.entity();
-    world.set<Name>(entity, Name{name.c_str()});
+    world.set<Name>(entity, Name{strdup(name.c_str())});
     return entity;
 }
 

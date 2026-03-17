@@ -3,6 +3,8 @@
 #include "engine/reflection/rayflect.hpp"
 #include <string>
 #include <sstream>
+#include <vector>
+#include <cstring>
 
 class JsonSerializer {
 public:
@@ -60,5 +62,17 @@ public:
         }
         oss << "}";
         return oss.str();
+    }
+
+    template<typename Init>
+    static std::string serialize_default(const StructDef &def, const size_t size, Init &&init) {
+        std::vector<char> storage(size);
+        if (size > 0) {
+            std::memset(storage.data(), 0, size);
+            init(storage.data());
+            return serialize(def, storage.data());
+        }
+        init(nullptr);
+        return serialize(def, nullptr);
     }
 };

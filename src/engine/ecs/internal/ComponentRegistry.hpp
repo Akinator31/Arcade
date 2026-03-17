@@ -21,7 +21,7 @@ namespace ecs::internal {
         std::vector<ecs::ArchetypeID> archetypes;
         std::vector<ecs::ComponentID> required;
 
-        void (*construct)(World &, Entity) = nullptr;
+        void (*construct)(World &, void *) = nullptr;
 
         void (*onAdd)(World &, Entity) = nullptr;
 
