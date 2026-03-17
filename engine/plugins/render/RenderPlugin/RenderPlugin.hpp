@@ -1,6 +1,5 @@
 #pragma once
 #include "engine/ecs/World.hpp"
-#include "engine/Graphics.hpp"
 #include "engine/plugins/render/PositionPropagationPlugin/PositionPropagationPlugin.hpp"
 
 template<class Fn>

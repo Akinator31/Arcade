@@ -1,6 +1,5 @@
 #include "ExampleGame.hpp"
 
-#include "engine/Graphics.hpp"
 #include "engine/plugins/DefaultPlugins.hpp"
 
 ExampleGame::ExampleGame() : player(world.create()) {

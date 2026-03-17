@@ -2,7 +2,8 @@
 #include "Relation.hpp"
 #include "engine/datastructures/EcsVec.hpp"
 #include "type.hpp"
-#include "engine/Graphics.hpp"
+#include "arcade/rayflect.hpp"
+#include "arcade/Types.hpp"
 #include "engine/reflection/type_id.hpp"
 
 namespace ecs {
@@ -24,10 +25,13 @@ struct RelationSource {
 template<typename T>
 struct RelationTarget {
     ecs::Entity target;
+
     rayflect(value, {
              value->member<uint32_t>("index");
              value->member<uint32_t>("generation");
-             })
+             }
+
+    )
 };
 
 struct Hierarchy : ecs::DespawnRelated {
@@ -52,7 +56,7 @@ struct Name {
     static void onSet(ecs::World &world, ecs::Entity entity, const Name *name);
 
     rayflect(Name,
-             Name->member<const char*>("value");
+             Name->member<const char *> ("value");
     )
 };
 

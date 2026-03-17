@@ -24,16 +24,16 @@ if (ENABLE_SANITIZERS)
     list(APPEND ARCADE_SANITIZER_LINK_OPTIONS -fsanitize=address,undefined)
 endif ()
 
-file(GLOB_RECURSE ECS_SRC CONFIGURE_DEPENDS "ecs/*.cpp")
+file(GLOB_RECURSE ECS_SRC CONFIGURE_DEPENDS "engine/*.cpp")
 file(GLOB_RECURSE TEST_SRC CONFIGURE_DEPENDS "tests/*.cpp")
 
 add_library(arcade_shared INTERFACE)
-target_include_directories(arcade_shared INTERFACE shared ecs)
+target_include_directories(arcade_shared INTERFACE shared .)
 
 if (BUILD_GAMES OR BUILD_TESTS)
     add_library(arcade_ecs OBJECT ${ECS_SRC})
     set_target_properties(arcade_ecs PROPERTIES POSITION_INDEPENDENT_CODE ON)
-    target_include_directories(arcade_ecs PUBLIC shared ecs)
+    target_include_directories(arcade_ecs PUBLIC shared .)
     target_compile_options(arcade_ecs PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
 endif ()
 
@@ -71,7 +71,7 @@ if (BUILD_GAMES)
             games/example/ExampleGame.hpp
     )
     target_sources(game_example PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
-    target_include_directories(game_example PRIVATE shared ecs games/example)
+    target_include_directories(game_example PRIVATE shared . games/example)
     target_link_libraries(game_example PRIVATE arcade_shared)
     target_compile_options(game_example PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
     target_link_options(game_example PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
@@ -92,7 +92,7 @@ if (BUILD_TESTS)
         )
 
         target_link_options(unittests PRIVATE --coverage ${ARCADE_SANITIZER_LINK_OPTIONS})
-        target_include_directories(unittests PRIVATE shared ecs tests)
+        target_include_directories(unittests PRIVATE shared . tests)
         target_link_libraries(unittests PRIVATE arcade_shared ${CRITERION_LIB} ${CMAKE_DL_LIBS})
 
         add_test(NAME unittests COMMAND unittests)
