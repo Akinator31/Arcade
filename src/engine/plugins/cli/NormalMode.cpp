@@ -6,6 +6,7 @@ void CliPlugin::init_normal_commands() {
     normal_commands["roots"] = cli::normal_mode_commands::roots();
     normal_commands["create"] = cli::normal_mode_commands::create();
     normal_commands["delete"] = cli::normal_mode_commands::remove();
+    normal_commands["print"] = cli::normal_mode_commands::print();
     normal_commands["inspect"] = cli::normal_mode_commands::inspect();
     normal_commands["progress"] = cli::normal_mode_commands::progress();
 }

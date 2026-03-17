@@ -42,7 +42,7 @@ struct Primitive {
     methode(i64, int64_t)
     methode(u32, uint32_t)
     methode(u64, uint64_t)
-    static Primitive cstr(const char* value) { return {PrimitiveType::cstr, {.cstr = value}}; }
+    static Primitive cstr(const char *value) { return {PrimitiveType::cstr, {.cstr = value}}; }
 };
 
 
@@ -59,7 +59,7 @@ class StructDef {
     size_t struct_size = 0;
     size_t struct_align = 1;
 
-    static size_t align_up(size_t v, size_t a) {
+    static size_t align_up(const size_t v, const size_t a) {
         return (v + a - 1) & ~(a - 1);
     }
 
@@ -86,7 +86,7 @@ public:
         else if constexpr (std::is_same_v<T, long>) m.type = PrimitiveType::i64;
         else if constexpr (std::is_same_v<T, uint32_t>)m.type = PrimitiveType::u32;
         else if constexpr (std::is_same_v<T, uint64_t>)m.type = PrimitiveType::u64;
-        else if constexpr (std::is_same_v<T, const char*>)m.type = PrimitiveType::cstr;
+        else if constexpr (std::is_same_v<T, const char *>)m.type = PrimitiveType::cstr;
 
         struct_size = align_up(struct_size, m.align);
         m.offset = struct_size;
@@ -118,42 +118,42 @@ public:
         ) = value;
     }
 
-    void from_string(void* ptr, const char* name, const std::string& value) const {
+    void from_string(void *ptr, const char *name, const std::string &value) const {
         const auto m = find(name);
         if (!m) return;
 
-        void* member_ptr = static_cast<char*>(ptr) + m->offset;
+        void *member_ptr = static_cast<char *>(ptr) + m->offset;
 
         try {
             switch (m->type) {
                 case PrimitiveType::u8:
-                    *static_cast<uint8_t*>(member_ptr) = static_cast<uint8_t>(std::stoul(value));
+                    *static_cast<uint8_t *>(member_ptr) = static_cast<uint8_t>(std::stoul(value));
                     break;
                 case PrimitiveType::u16:
-                    *static_cast<uint16_t*>(member_ptr) = static_cast<uint16_t>(std::stoul(value));
+                    *static_cast<uint16_t *>(member_ptr) = static_cast<uint16_t>(std::stoul(value));
                     break;
                 case PrimitiveType::f32:
-                    *static_cast<float*>(member_ptr) = std::stof(value);
+                    *static_cast<float *>(member_ptr) = std::stof(value);
                     break;
                 case PrimitiveType::f64:
-                    *static_cast<double*>(member_ptr) = std::stod(value);
+                    *static_cast<double *>(member_ptr) = std::stod(value);
                     break;
                 case PrimitiveType::i32:
-                    *static_cast<int32_t*>(member_ptr) = std::stoi(value);
+                    *static_cast<int32_t *>(member_ptr) = std::stoi(value);
                     break;
                 case PrimitiveType::i64:
-                    *static_cast<int64_t*>(member_ptr) = std::stoll(value);
+                    *static_cast<int64_t *>(member_ptr) = std::stoll(value);
                     break;
                 case PrimitiveType::u32:
-                    *static_cast<uint32_t*>(member_ptr) = std::stoul(value);
+                    *static_cast<uint32_t *>(member_ptr) = std::stoul(value);
                     break;
                 case PrimitiveType::u64:
-                    *static_cast<uint64_t*>(member_ptr) = std::stoull(value);
+                    *static_cast<uint64_t *>(member_ptr) = std::stoull(value);
                     break;
                 case PrimitiveType::cstr: {
-                    char* str = new char[value.length() + 1];
+                    const auto str = new char[value.length() + 1];
                     std::strcpy(str, value.c_str());
-                    *static_cast<const char**>(member_ptr) = str;
+                    *static_cast<const char **>(member_ptr) = str;
                     break;
                 }
             }
@@ -161,7 +161,7 @@ public:
         }
     }
 
-    [[nodiscard]] const std::vector<StructMember>& get_members() const {
+    [[nodiscard]] const std::vector<StructMember> &get_members() const {
         return members;
     }
 

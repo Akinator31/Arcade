@@ -1,5 +1,7 @@
 #include "NormalModeCommands.hpp"
 
+#include "engine/parsing/JsonSerializer.hpp"
+
 namespace cli::normal_mode_commands {
     CliPlugin::CommandHandler ls() {
         return [](CliPlugin &, CliSession &, const ecs::World &world, Scanner &, std::ostream &output) {
@@ -34,7 +36,7 @@ namespace cli::normal_mode_commands {
                     if (names != nullptr) {
                         output << names[i].value << "\n";
                     } else {
-                        output << world.makeEntityName(entity) << "\n";
+                        output << ecs::World::makeEntityName(entity) << "\n";
                     }
                 }
             });
@@ -42,13 +44,13 @@ namespace cli::normal_mode_commands {
     }
 
     CliPlugin::CommandHandler create() {
-        return [](CliPlugin &cli, CliSession &, ecs::World &world, Scanner &scanner, std::ostream &) {
+        return [](CliPlugin &, CliSession &, ecs::World &world, Scanner &scanner, std::ostream &) {
             scanner.skip_whitespace();
             const std::string name = scanner.take_rest();
             if (name.empty()) {
                 return;
             }
-            cli.create_named_entity(world, name);
+            CliPlugin::create_named_entity(world, name);
         };
     }
 
@@ -65,8 +67,44 @@ namespace cli::normal_mode_commands {
         };
     }
 
+    CliPlugin::CommandHandler print() {
+        return [](CliPlugin &, CliSession &, ecs::World &world, Scanner &scanner, std::ostream &output) {
+            scanner.skip_whitespace();
+            const std::string name = scanner.take_identifier();
+            if (name.empty()) {
+                return;
+            }
+
+            const auto it = world.component_registry.name_to_id.find(name);
+            if (it == world.component_registry.name_to_id.end()) {
+                output << "Component not found\n";
+                return;
+            }
+
+            const auto &record = world.component_registry.getRecord(it->second);
+            if (!record.def) {
+                output << "not reflectable\n";
+                return;
+            }
+            if (record.size < record.def->size()) {
+                output << "component storage does not match reflection\n";
+                return;
+            }
+
+            output << JsonSerializer::serialize_default(
+                *record.def,
+                record.size,
+                [&](void *ptr) {
+                    if (record.construct != nullptr) {
+                        record.construct(world, ptr);
+                    }
+                }
+            ) << "\n";
+        };
+    }
+
     CliPlugin::CommandHandler inspect() {
-        return [](CliPlugin &, CliSession &session, ecs::World &world, Scanner &scanner, std::ostream &) {
+        return [](CliPlugin &, CliSession &session, const ecs::World &world, Scanner &scanner, std::ostream &) {
             scanner.skip_whitespace();
             const std::string name = scanner.take_rest();
             if (name.empty()) {

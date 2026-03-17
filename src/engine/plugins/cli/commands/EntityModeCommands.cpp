@@ -112,7 +112,7 @@ namespace cli::entity_mode_commands {
             }
 
             if (cid == reflection::type_id<Name>() && field_name == "value") {
-                world.set<Name>(session.inspected_entity, Name{value.c_str()});
+                world.set<Name>(session.inspected_entity, Name{strdup(value.c_str())});
                 return;
             }
 

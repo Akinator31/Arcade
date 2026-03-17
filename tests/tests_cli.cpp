@@ -57,7 +57,7 @@ std::string read_from_socket(const int fd) {
     return {buffer, static_cast<std::size_t>(size)};
 }
 
-std::string wait_for_socket_data(ecs::World& world, const int fd, const int max_ticks = 50) {
+std::string wait_for_socket_data(ecs::World &world, const int fd, const int max_ticks = 50) {
     for (int i = 0; i < max_ticks; i++) {
         world.progress();
         if (const std::string data = read_from_socket(fd); !data.empty()) {
@@ -72,6 +72,7 @@ Test(cli, normal_ls, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
 
     cli.progress(world, "ls");
@@ -112,6 +113,42 @@ Test(cli, normal_create_then_inspect, .init = redirect_all_stdout) {
     cli.progress(world, "inspect Player1");
 
     cr_assert(cli.session.state == CliState::Entity);
+}
+
+Test(cli, normal_print_component_default, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    world.registerComponent<Name>();
+
+    cli.progress(world, "print Name");
+
+    fflush(stdout);
+    cr_assert_stdout_eq_str("{\n"
+        "  \"value\": \"\"\n"
+        "}\n");
+}
+
+Test(cli, normal_print_missing_component, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    cli.progress(world, "print Missing");
+
+    fflush(stdout);
+    cr_assert_stdout_eq_str("Component not found\n");
+}
+
+Test(cli, normal_print_not_reflectable, .init = redirect_all_stdout) {
+    ecs::World world;
+    CliPlugin cli;
+
+    world.registerComponent<Enemy>();
+
+    cli.progress(world, "print Enemy");
+
+    fflush(stdout);
+    cr_assert_stdout_eq_str("not reflectable\n");
 }
 
 Test(cli, normal_delete, .init = redirect_all_stdout) {
@@ -216,6 +253,7 @@ Test(cli, entity_ls, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
     world.registerComponent<Name>();
 
@@ -262,6 +300,7 @@ Test(cli, entity_print, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
     world.registerComponent<Name>();
 
@@ -277,10 +316,10 @@ Test(cli, entity_print, .init = redirect_all_stdout) {
     cli.progress(world, "print Position");
 
     fflush(stdout);
-    const char* expected_pos = "{\n"
-                               "  \"x\": 10,\n"
-                               "  \"y\": 20\n"
-                               "}\n";
+    const char *expected_pos = "{\n"
+            "  \"x\": 10,\n"
+            "  \"y\": 20\n"
+            "}\n";
     cr_assert_stdout_eq_str(expected_pos);
 }
 
@@ -288,6 +327,7 @@ Test(cli, entity_set, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
     world.registerComponent<Name>();
 
@@ -313,6 +353,7 @@ Test(cli, entity_add, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
     world.registerComponent<Name>();
 
@@ -347,6 +388,7 @@ Test(cli, entity_remove, .init = redirect_all_stdout) {
     ecs::World world;
     CliPlugin cli;
 
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
     world.registerComponent<Name>();
 

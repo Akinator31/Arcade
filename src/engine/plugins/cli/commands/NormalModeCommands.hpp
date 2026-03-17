@@ -13,6 +13,8 @@ namespace cli::normal_mode_commands {
 
     CliPlugin::CommandHandler remove();
 
+    CliPlugin::CommandHandler print();
+
     CliPlugin::CommandHandler inspect();
 
     CliPlugin::CommandHandler progress();

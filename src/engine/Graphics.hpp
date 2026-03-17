@@ -71,7 +71,8 @@ struct Node {
     float borderWidth;
 };
 
-
+// the real position in the world
+// Position component represent the local position from the hierarchy
 struct GlobalPosition : Vec2Reflect {
     float x;
     float y;

@@ -3,10 +3,19 @@
 #include "Relation.hpp"
 #include "engine/datastructures/EcsVec.hpp"
 #include "type.hpp"
+#include "engine/Graphics.hpp"
+#include "engine/reflection/type_id.hpp"
 
 namespace ecs {
     class World;
 }
+
+template<typename... Components>
+struct Required {
+    static std::array<ecs::ComponentID, sizeof...(Components)> required_components() {
+        return {reflection::type_id<Components>()...};
+    }
+};
 
 template<typename T>
 struct RelationSource {
@@ -35,6 +44,8 @@ struct Name {
 
     explicit Name(const char *name);
 
+    explicit Name(const std::string &);
+
     static void onAdd(ecs::World &world, ecs::Entity entity);
 
     static void onSet(ecs::World &world, ecs::Entity entity, const Name *name);
@@ -42,4 +53,12 @@ struct Name {
     rayflect(Name,
              Name->member<const char*>("value");
     )
+};
+
+// the local position from the hierarchy
+struct Position : Required<GlobalPosition>, Vec2Reflect {
+    float x, y;
+
+    Position(const float x, const float y) : x(x), y(y) {
+    }
 };

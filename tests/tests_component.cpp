@@ -15,6 +15,7 @@ Test(component, default_constructor) {
 
     const ecs::Entity player = world.entity();
 
+    world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();
     world.add<Position>(player);
 
@@ -47,6 +48,7 @@ Test(component, required) {
 
     const ecs::Entity player = world.entity();
 
+    world.registerComponent<Hovered>();
     world.registerComponent<Clicked>();
     world.add<Clicked>(player);
     cr_assert(world.has<Hovered>(player));
@@ -62,6 +64,7 @@ Test(component, name_default_on_add) {
 
     const std::string expected = "entity(" + std::to_string(entity.index) + ", " + std::to_string(entity.generation) +
                                  ")";
+
     cr_assert_str_eq(world.get<Name>(entity)->value, expected.c_str());
 
     const auto found = world.findEntityByName(expected);

@@ -1,16 +1,8 @@
 #pragma once
 #include "Query.hpp"
-#include <deque>
-#include <optional>
-#include <string>
-#include <unordered_map>
 #include "internal/ArchetypeRegistry.hpp"
 #include "internal/EntityRegistry.hpp"
 #include "internal/ComponentRegistry.hpp"
-#include <array>
-#include <functional>
-#include <utility>
-#include <tuple>
 #include "Component.hpp"
 #include "State.hpp"
 #include "System.hpp"
@@ -23,14 +15,12 @@
 #include "EntityRef.hpp"
 #include "Plugin.hpp"
 #include "TablesReader.hpp"
-#include "engine/Graphics.hpp"
 
 namespace ecs {
     class World : public internal::EventRegistry, public StateRegistry, public SingletonRegistry {
         PhaseContainer phase_container;
         std::vector<Phase> phases;
         std::vector<PluginRecord> loaded_plugins;
-        std::deque<std::string> stored_entity_names;
         std::unordered_map<std::string, Entity> entity_name_to_entity;
 
     public:
@@ -47,7 +37,7 @@ namespace ecs {
 
         template<typename T, typename... Args>
         void plugin(Args &&... args) {
-            const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
+            const PluginId id = reflection::TypeCounter<PluginFamily>::id<T>();
             if (id >= this->loaded_plugins.size()) {
                 this->loaded_plugins.resize(id + 1);
             }
@@ -100,7 +90,7 @@ namespace ecs {
 
         const char *storeEntityName(const std::string &name);
 
-        std::string makeEntityName(Entity entity) const;
+        static std::string makeEntityName(Entity entity);
 
         void syncEntityName(Entity entity);
 
@@ -125,15 +115,15 @@ namespace ecs {
 
             if constexpr (reflection::is_complete<T>()) {
                 if constexpr (HasFromWorldConstructor<T>) {
-                    record.construct = [](World &world, const Entity entity) {
-                        if (T *value = world.get<T>(entity); value != nullptr) {
-                            *value = T(world);
+                    record.construct = [](World &world, void *ptr) {
+                        if (ptr != nullptr) {
+                            *static_cast<T *>(ptr) = T(world);
                         }
                     };
                 } else if constexpr (HasDefaultConstructor<T>) {
-                    record.construct = [](World &world, const Entity entity) {
-                        if (T *value = world.get<T>(entity); value != nullptr) {
-                            *value = T();
+                    record.construct = [](World &, void *ptr) {
+                        if (ptr != nullptr) {
+                            *static_cast<T *>(ptr) = T();
                         }
                     };
                 }
@@ -145,8 +135,7 @@ namespace ecs {
                 };
             }
 
-            if constexpr (requires(ecs::World &world) { T::registerRequiredComponents(world); }) {
-                T::registerRequiredComponents(*this);
+            if constexpr (HasRequiredComponents<T>) {
                 for (const ComponentID required_cid: T::required_components()) {
                     this->component_registry.addRequired(cid, required_cid);
                 }
@@ -220,13 +209,15 @@ namespace ecs {
             this->registerComponent<Source>();
 
             struct OnDespawnTarget : With<Target>, On<Despawn> {
-                static void observe(internal::Archetype &arch, internal::EntityRow row) {
+                // ReSharper disable once CppParameterMayBeConstPtrOrRef
+                static void observe(internal::Archetype &arch, const internal::EntityRow row) {
                     arch.world.remove_target<T>(arch.getEntities()[row]);
                 }
             };
 
             struct OnDespawnSource : With<Source>, On<Despawn> {
-                static void observe(internal::Archetype &arch, internal::EntityRow row) {
+                // ReSharper disable once CppParameterMayBeConstPtrOrRef
+                static void observe(internal::Archetype &arch, const internal::EntityRow row) {
                     auto *sources = static_cast<Source *>(arch.getComponent(row, reflection::type_id<Source>()));
                     for (auto entities_copy = sources->entities.clone(); const Entity entity: entities_copy) {
                         if constexpr (requires { requires T::despawn_related; }) {
@@ -414,17 +405,8 @@ namespace ecs {
 
         const datastructures::EcsVec<ArchetypeID> &matches(QueryID qid) const;
 
-        template<typename... Filter>
-        static bool filter(ArchetypeView &view, internal::EntityRow row) {
-            return (Filter{}(view, row) && ...);
-        }
 
-        template
-        <
-            typename
-            ...
-            Components>
-
+        template<typename... Components>
         auto fetch() {
             QueryCache cached;
             cached.required<Components...>();
@@ -491,30 +473,11 @@ namespace ecs {
     }
 } // namespace ecs
 
-template<typename... Components>
-struct Required {
-    static std::array<ecs::ComponentID, sizeof...(Components)> required_components() {
-        return {reflection::type_id<Components>()...};
-    }
-
-    static void registerRequiredComponents(ecs::World &world) {
-        (world.registerComponent<Components>(), ...);
-    }
-};
-
-
-struct Position : Required<GlobalPosition>, Vec2Reflect {
-    float x, y;
-
-    Position(const float x, const float y) : x(x), y(y) {
-    }
-};
-
-
 template<int>
 struct Interval {
     static Timer timer;
 
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     static bool condition(ecs::World &world) {
         return timer.tick(world.deltaTime);
     }

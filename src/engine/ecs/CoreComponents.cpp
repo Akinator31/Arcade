@@ -37,6 +37,12 @@ Name::Name(const char *name) : value(name) {
     }
 }
 
+Name::Name(const std::string &name) : value(strdup(name.c_str())) {
+    if (!is_name_identifier(name.c_str())) {
+        throw std::invalid_argument("invalid entity name");
+    }
+}
+
 void Name::onAdd(ecs::World &world, const ecs::Entity entity) {
     world.syncEntityName(entity);
 }

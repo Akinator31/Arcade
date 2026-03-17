@@ -33,7 +33,7 @@ struct Any {
 template<typename T>
 concept HasRequiredComponents = requires(ecs::World &world, ecs::Entity entity)
 {
-    { T::add(world, entity) };
+    { T::required_components() };
 };
 
 template<typename T>
@@ -41,6 +41,7 @@ concept HasOnAdd = requires(ecs::World &world, ecs::Entity entity)
 {
     { T::onAdd(world, entity) };
 };
+
 
 template<typename T>
 concept HasOnSet = requires(ecs::World &world, ecs::Entity entity, const T *value)

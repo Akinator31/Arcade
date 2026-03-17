@@ -28,6 +28,7 @@ SYSTEM(PositionHierarchyPropagationSys, With<GlobalPosition>, Without<Parent>, O
 
 struct PositionPropagationPlugin {
     void load(ecs::World &world) {
+        world.registerComponent<GlobalPosition>();
         world.registerComponent<Position>();
         world.relation<Hierarchy>();
         world.system<PositionHierarchyPropagationSys>();
