@@ -2,11 +2,7 @@
 
 #include <criterion/criterion.h>
 
-#include "engine/ecs/Query.hpp"
-
-struct Velocity : Position {
-};
-
+#include "../src/engine/ecs/system/Query.hpp"
 
 struct Player {
 };
@@ -36,6 +32,8 @@ Test(ecs, component) {
 
     const ecs::Entity entity = world.entity();
 
+    world.registerComponent<GlobalPosition>();
+    world.registerComponent<Position>();
     world.add<Position>(entity);
     world.get<Position>(entity)->x = 10;
     const auto *pos = world.get<Position>(entity);
@@ -47,6 +45,8 @@ Test(ecs, query) {
     ecs::World world;
 
     const ecs::Entity entity = world.entity();
+    world.registerComponent<GlobalPosition>();
+    world.registerComponent<Position>();
     world.add<Position>(entity);
 
     world.fetch<Position>()
@@ -69,4 +69,3 @@ Test(ecs, query) {
 
     cr_assert_eq(world.get<Position>(entity)->x, 20);
 }
-

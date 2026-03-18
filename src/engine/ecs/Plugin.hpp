@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/ecs/type.hpp"
+#include "entity/type.hpp"
 
 namespace ecs {
     class World;

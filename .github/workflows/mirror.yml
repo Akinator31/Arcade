@@ -26,19 +26,39 @@ jobs:
           exit 1
 
   push_to_mirror:
-
-    name: Mirror repo to MIRROR_URL
+    name: Push to a mirror repository
+    if: ${{ github.ref_name == 'main' }}
+    needs: [ check_workflow_conditions ]
     runs-on: ubuntu-latest
-    needs: [check_workflow_conditions]
-    if: github.event_name == 'push'
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: pixta-dev/repository-mirroring-action@v1
-        with:
-          target_repo_url:
-            ${{ vars.MIRROR_URL }}
-          ssh_private_key:
-            ${{ secrets.GIT_SSH_PRIVATE_KEY }}
+
+      - name: Create SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ env.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -t rsa $(echo ${{ vars.MIRROR_URL }} | cut -d':' -f1 | cut -d'@' -f2) >> ~/.ssh/known_hosts
+        env:
+          SSH_KEY: ${{ secrets.GIT_SSH_PRIVATE_KEY }}
+
+      - name: Remove .github directory
+        run: |
+          git filter-branch --force --index-filter 'git rm -r --cached --ignore-unmatch .github' --prune-empty --tag-name-filter cat -- --all
+          git gc --prune=now
+          git clean -fd
+
+      - name: Verify Repository
+        run: |
+          git fsck --full || echo "Git fsck completed with warnings"
+          git gc || echo "Git gc completed with warnings"
+
+      - name: Push to mirror
+        run: |
+          git remote add -f mirror ${{ vars.MIRROR_URL }}
+          git push mirror --mirror --prune --force
+          echo "Successfully mirrored to ${{ vars.MIRROR_URL }}"

@@ -1,3 +1,6 @@
 [submodule "docs/doxygen-awesome"]
 	path = docs/doxygen-awesome
 	url = git@github.com:jothepro/doxygen-awesome-css.git
+[submodule "src/shared/arcade"]
+	path = src/shared/arcade
+	url = git@github.com:arcade-tls/Interfaces.git

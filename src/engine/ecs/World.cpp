@@ -1,6 +1,7 @@
 #include "World.hpp"
 
 #include <algorithm>
+#include <format>
 #include <stdexcept>
 
 namespace ecs {
@@ -8,6 +9,7 @@ namespace ecs {
         [[maybe_unused]] auto archeId =
                 this->findOrCreateArchetype({});
 
+        this->registerComponent<Name>();
         this->relation<Hierarchy>();
     }
 
@@ -25,6 +27,17 @@ namespace ecs {
                 }
             }
         }
+        for (auto &archetype: this->archetype_registry.archetypes) {
+            for (const ComponentID cid: archetype.getType()) {
+                if (!archetype.stores(cid)) {
+                    continue;
+                }
+                for (internal::EntityRow row = 0; row < archetype.count(); row += 1) {
+                    this->runOnRemove(archetype.getEntities()[row], cid, archetype.getComponent(row, cid));
+                }
+            }
+        }
+        this->entity_name_to_entity.clear();
     }
 
     ArchetypeID World::findOrCreateArchetype(EntityType &&type) {
@@ -74,6 +87,12 @@ namespace ecs {
     }
 
     bool World::add_id(const Entity entity, const ComponentID cid) {
+#ifndef NDEBUG
+        if (!this->component_registry.isRegistered(cid)) {
+            throw std::logic_error("component not registered");
+        }
+#endif
+
         const auto &record = this->entity_registry.getRecord(entity);
         const auto &arch = this->archetype_registry.getArchetype(record.archetypeId);
 
@@ -93,6 +112,9 @@ namespace ecs {
                     .addEdge.set(cid, newArchId);
         }
         this->migrate(entity, newArchId);
+        this->constructComponent(entity, cid);
+        this->runOnAdd(entity, cid);
+        this->addRequiredComponents(entity, cid);
         return true;
     }
 
@@ -102,9 +124,15 @@ namespace ecs {
 
 
         EntityType newType = arch.getType().clone();
+        std::vector<ComponentID> added;
+        added.reserve(count);
         for (uint32_t i = 0; i < count; i++) {
+            if (!this->component_registry.isRegistered(cid[i])) {
+                throw std::logic_error("component not registered");
+            }
             if (!arch.has(cid[i])) {
                 newType.add(cid[i]);
+                added.push_back(cid[i]);
             }
         }
 
@@ -114,7 +142,42 @@ namespace ecs {
 
         const ArchetypeID newArchId = this->findOrCreateArchetype(std::move(newType));
         this->migrate(entity, newArchId);
+        for (const ComponentID added_cid: added) {
+            this->constructComponent(entity, added_cid);
+        }
+        for (const ComponentID added_cid: added) {
+            this->runOnAdd(entity, added_cid);
+        }
+        for (const ComponentID added_cid: added) {
+            this->addRequiredComponents(entity, added_cid);
+        }
         return true;
+    }
+
+    void World::constructComponent(const Entity entity, const ComponentID cid) {
+        if (const auto &record = this->component_registry.getRecord(cid); record.construct != nullptr) {
+            record.construct(*this, this->get_id(entity, cid));
+        }
+    }
+
+    void World::runOnAdd(const Entity entity, const ComponentID cid) {
+        if (const auto &record = this->component_registry.getRecord(cid); record.onAdd != nullptr) {
+            record.onAdd(*this, entity);
+        }
+    }
+
+    void World::runOnRemove(const Entity entity, const ComponentID cid, const void *value) {
+        if (const auto &record = this->component_registry.getRecord(cid); record.onRemove != nullptr &&
+            value != nullptr) {
+            record.onRemove(*this, entity, value);
+        }
+    }
+
+    void World::addRequiredComponents(const Entity entity, const ComponentID cid) {
+        for (const auto &record = this->component_registry.getRecord(cid); const ComponentID required_cid: record.
+             required) {
+            this->add_id(entity, required_cid);
+        }
     }
 
     void World::remove_id(const Entity entity, const ComponentID cid) {
@@ -132,6 +195,7 @@ namespace ecs {
             for (uint i = 0; i < onRemove.size; i++) {
                 onRemove.data[i](arch, record.row);
             }
+            this->runOnRemove(entity, cid, arch.getComponent(record.row, cid));
         }
         ArchetypeID newArchId;
         if (arch.removeEdge.has(cid)) {
@@ -185,19 +249,18 @@ namespace ecs {
     }
 
     Entity World::entity() {
-        return this->entity_registry.create();
+        const Entity entity = this->entity_registry.create();
+
+        this->set(entity, Name(std::format("entity({}, {})", entity.index, entity.generation)));
+
+        return entity;
     }
 
     EntityRef World::create() {
-        return EntityRef(*this, this->entity_registry.create());
+        return EntityRef(*this, this->entity());
     }
 
-    const char *World::storeEntityName(const std::string &name) {
-        this->stored_entity_names.push_back(name);
-        return this->stored_entity_names.back().c_str();
-    }
-
-    std::string World::makeEntityName(const Entity entity) const {
+    std::string World::makeEntityName(const Entity entity) {
         return "entity(" + std::to_string(entity.index) + ", " + std::to_string(entity.generation) + ")";
     }
 
@@ -215,19 +278,21 @@ namespace ecs {
 
         std::string value = name->value == nullptr ? "" : name->value;
         if (value.empty()) {
-            value = this->makeEntityName(entity);
+            value = ecs::World::makeEntityName(entity);
+            free(const_cast<char *>(name->value));
+            name->value = strdup(value.c_str());
         }
 
-        Name validated_name(value.c_str());
+        const Name validated_name(value.c_str());
+        free(const_cast<char *>(validated_name.value));
 
         if (const auto it = this->entity_name_to_entity.find(value);
-            it != this->entity_name_to_entity.end() && !(it->second == entity)) {
+            it != this->entity_name_to_entity.end() && it->second != entity) {
             throw std::invalid_argument("duplicate entity name");
         }
 
         this->clearEntityName(entity);
-        name->value = this->storeEntityName(validated_name.value);
-        this->entity_name_to_entity[name->value] = entity;
+        this->entity_name_to_entity[value] = entity;
     }
 
     std::optional<Entity> World::findEntityByName(const std::string &name) const {
@@ -242,11 +307,18 @@ namespace ecs {
             if (this->has<Name>(entity)) {
                 this->clearEntityName(entity);
             }
-            for (internal::Archetype &arch = this->archetype_registry.getArchetype(record.archetypeId); const auto &sys:
-                 arch.onDespawn) {
+            internal::Archetype &arch = this->archetype_registry.getArchetype(record.archetypeId);
+            for (const auto &sys: arch.onDespawn) {
                 sys(arch, record.row);
             }
-            this->removeEntityOfArchetype(this->archetype_registry.getArchetype(record.archetypeId), record.row);
+            const internal::EntityRecord &updated_record = this->entity_registry.getRecord(entity);
+            internal::Archetype &updated_arch = this->archetype_registry.getArchetype(updated_record.archetypeId);
+            for (const ComponentID cid: updated_arch.getType()) {
+                if (updated_arch.stores(cid)) {
+                    this->runOnRemove(entity, cid, updated_arch.getComponent(updated_record.row, cid));
+                }
+            }
+            this->removeEntityOfArchetype(updated_arch, updated_record.row);
         }
         return this->entity_registry.destroy(entity);
     }

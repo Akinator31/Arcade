@@ -17,6 +17,10 @@ Test(ecs_batch, add_batched) {
     ecs::World world;
     ecs::Entity e = world.entity();
 
+    world.registerComponent<CompA>();
+    world.registerComponent<CompB>();
+    world.registerComponent<CompC>();
+
     size_t first_count = world.getArchetypes().size();
     world.add<CompA, CompB, CompC>(e);
     size_t after_count = world.getArchetypes().size();
