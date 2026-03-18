@@ -1,28 +1,52 @@
-#include <iostream>
-#include "core/dynamic/GameLoader.hpp"
-#include "core/dynamic/GraphicsLoader.hpp"
+#include <bits/this_thread_sleep.h>
+#include "engine/Graphics.hpp"
+#include "engine/dynamic/DynamicLoader.hpp"
+#include "engine/dynamic/Loader.hpp"
+#include "engine/ecs/World.hpp"
+#include "engine/plugins/CliPlugin.hpp"
+#include "engine/plugins/render/PositionPropagationPlugin.hpp"
+#include "engine/plugins/render/RenderPlugin.hpp"
 
-int main(const int argc, char **argv) {
-    if (argc != 3) {
-        std::cerr << "usage: arcade <graphics_lib.so> <game_lib.so>\n";
-        return 1;
-    }
+struct NoIntegrate;
 
-    GraphicsApiLoader graphics_loader(argv[1]);
-    GameLoader game_loader(argv[2]);
 
-    GraphicsApi *api = graphics_loader.call<Create>();
-    IGame *game = game_loader.call<LoadGame>();
+enum class GameState {
+    Menu,
+    Game
+};
 
+
+struct Player;
+struct Enemy;
+
+
+int main() {
+    ecs::World world;
+
+    GraphicsApiLoader graphicsLoader("./libsfml_api.so");
+
+    GraphicsApi *api = graphicsLoader.call<Create>();
     api->init();
+
+    world.create().set(
+        Size{100, 100},
+        Position{100, 100},
+        Color{255, 0, 0, 255},
+        Name{"Parent"}
+    ).child().set(Size{100, 100},
+                  Position{100, 100},
+                  Color{255, 0, 0, 255}, Name{"Child"});
+
+    world.plugin<CliPlugin>(CliMode::Server, 4040);
+    world.plugin<PositionPropagationPlugin>();
+    world.plugin<RenderPlugin>();
+
+    world.singleton_init<GraphicsApi>(api);
+
     while (api->isWindowOpen()) {
         api->beginFrame();
-        game->update(api);
+        world.progress();
         api->endFrame();
     }
-    api->shutdown();
-
-    game_loader.call<UnloadGame>(game);
-    graphics_loader.call<Destroy>(api);
     return 0;
 }

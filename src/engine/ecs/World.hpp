@@ -1,27 +1,36 @@
 #pragma once
-#include "system/Query.hpp"
-#include "internal/Registry/ArchetypeRegistry.hpp"
-#include "internal/Registry/EntityRegistry.hpp"
-#include "internal/Registry/ComponentRegistry.hpp"
-#include "components/Component.hpp"
-#include "addons/State.hpp"
-#include "system/System.hpp"
-#include "addons/Timer.hpp"
+#include "Query.hpp"
+#include <deque>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include "internal/ArchetypeRegistry.hpp"
+#include "internal/EntityRegistry.hpp"
+#include "internal/ComponentRegistry.hpp"
+#include <array>
+#include <functional>
+#include <utility>
+#include <tuple>
+#include "Component.hpp"
+#include "State.hpp"
+#include "System.hpp"
+#include "Timer.hpp"
 #include "engine/reflection/TypeCounter.hpp"
-#include "internal/Registry/EventRegistry.hpp"
-#include "components/Relation.hpp"
-#include "addons/Singleton.hpp"
-#include "components/CoreComponents.hpp"
-#include "entity/EntityRef.hpp"
+#include "internal/EventRegistry.hpp"
+#include "Relation.hpp"
+#include "Singleton.hpp"
+#include "CoreComponents.hpp"
+#include "EntityRef.hpp"
 #include "Plugin.hpp"
-#include "arcade/GraphicsApi.hpp"
-#include "utils/TablesReader.hpp"
+#include "TablesReader.hpp"
+#include "engine/Graphics.hpp"
 
 namespace ecs {
     class World : public internal::EventRegistry, public StateRegistry, public SingletonRegistry {
         PhaseContainer phase_container;
         std::vector<Phase> phases;
         std::vector<PluginRecord> loaded_plugins;
+        std::deque<std::string> stored_entity_names;
         std::unordered_map<std::string, Entity> entity_name_to_entity;
 
     public:
@@ -29,7 +38,6 @@ namespace ecs {
         internal::EntityRegistry entity_registry;
         internal::ComponentRegistry component_registry;
         internal::ArchetypeRegistry archetype_registry;
-        GraphicsApi *api = nullptr;
 
         float deltaTime{};
 
@@ -39,7 +47,7 @@ namespace ecs {
 
         template<typename T, typename... Args>
         void plugin(Args &&... args) {
-            const PluginId id = reflection::TypeCounter<PluginFamily>::id<T>();
+            const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
             if (id >= this->loaded_plugins.size()) {
                 this->loaded_plugins.resize(id + 1);
             }
@@ -92,7 +100,7 @@ namespace ecs {
 
         const char *storeEntityName(const std::string &name);
 
-        static std::string makeEntityName(Entity entity);
+        std::string makeEntityName(Entity entity) const;
 
         void syncEntityName(Entity entity);
 
@@ -103,50 +111,6 @@ namespace ecs {
         template<typename T>
         void remove(const Entity entity) {
             this->remove_id(entity, reflection::type_id<T>());
-        }
-
-        template<typename T>
-        void registerComponent() {
-            const ComponentID cid = reflection::type_id<T>();
-            if (this->component_registry.isRegistered(cid)) {
-                return;
-            }
-
-            this->component_registry.registerComponent<T>();
-            auto &record = this->component_registry.getRecord(cid);
-
-            if constexpr (reflection::is_complete<T>()) {
-                if constexpr (HasFromWorldConstructor<T>) {
-                    record.construct = [](World &world, void *ptr) {
-                        if (ptr != nullptr) {
-                            *static_cast<T *>(ptr) = T(world);
-                        }
-                    };
-                } else if constexpr (HasDefaultConstructor<T>) {
-                    record.construct = [](World &, void *ptr) {
-                        if (ptr != nullptr) {
-                            *static_cast<T *>(ptr) = T();
-                        }
-                    };
-                }
-            }
-
-            if constexpr (HasOnAdd<T>) {
-                record.onAdd = [](World &world, const Entity entity) {
-                    T::onAdd(world, entity);
-                };
-            }
-            if constexpr (HasOnRemove<T>) {
-                record.onRemove = [](World &world, const Entity entity, const void *value) {
-                    T::onRemove(world, entity, static_cast<const T *>(value));
-                };
-            }
-
-            if constexpr (HasRequiredComponents<T>) {
-                for (const ComponentID required_cid: T::required_components()) {
-                    this->component_registry.addRequired(cid, required_cid);
-                }
-            }
         }
 
         template<typename T>
@@ -163,13 +127,8 @@ namespace ecs {
 
         template<typename T>
         void set(const Entity entity, const T &value) {
-            const ComponentID cid = reflection::type_id<T>();
-            this->add_id(entity, cid);
+            this->add<T>(entity);
             T *current = this->get<T>(entity);
-            if constexpr (std::is_same_v<T, Name>) {
-                this->clearEntityName(entity);
-            }
-            this->runOnRemove(entity, cid, current);
             memcpy(current, &value, sizeof(T));
             if constexpr (HasOnSet<T>) {
                 T::onSet(*this, entity, current);
@@ -178,13 +137,8 @@ namespace ecs {
 
         template<typename T>
         void set(const Entity entity, const T &&value) {
-            const ComponentID cid = reflection::type_id<T>();
-            this->add_id(entity, cid);
+            this->add<T>(entity);
             T *current = this->get<T>(entity);
-            if constexpr (std::is_same_v<T, Name>) {
-                this->clearEntityName(entity);
-            }
-            this->runOnRemove(entity, cid, current);
             *current = std::move(value);
             if constexpr (HasOnSet<T>) {
                 T::onSet(*this, entity, current);
@@ -197,7 +151,7 @@ namespace ecs {
             using Target = RelationTarget<T>;
             using Source = RelationSource<T>;
             if (this->has<Target>(source)) {
-                auto *oldTarget = this->get<Target>(source);
+                Target *oldTarget = this->get<Target>(source);
                 datastructures::EcsVec<Entity> &entities = this->get<Source>(oldTarget->target)->entities;
                 entities.remove(source);
                 if (entities.size == 0) {
@@ -222,19 +176,16 @@ namespace ecs {
             using Target = RelationTarget<T>;
             using Source = RelationSource<T>;
 
-            this->registerComponent<Target>();
-            this->registerComponent<Source>();
+            this->component_registry.registerComponent<RelationTarget<T> >();
 
             struct OnDespawnTarget : With<Target>, On<Despawn> {
-                // ReSharper disable once CppParameterMayBeConstPtrOrRef
-                static void observe(internal::Archetype &arch, const internal::EntityRow row) {
+                static void observe(internal::Archetype &arch, internal::EntityRow row) {
                     arch.world.remove_target<T>(arch.getEntities()[row]);
                 }
             };
 
             struct OnDespawnSource : With<Source>, On<Despawn> {
-                // ReSharper disable once CppParameterMayBeConstPtrOrRef
-                static void observe(internal::Archetype &arch, const internal::EntityRow row) {
+                static void observe(internal::Archetype &arch, internal::EntityRow row) {
                     auto *sources = static_cast<Source *>(arch.getComponent(row, reflection::type_id<Source>()));
                     for (auto entities_copy = sources->entities.clone(); const Entity entity: entities_copy) {
                         if constexpr (requires { requires T::despawn_related; }) {
@@ -333,18 +284,10 @@ namespace ecs {
                 System::without::exclude(query);
             }
 
-            System *sys = nullptr;
-
-            if constexpr (HasFromWorldConstructor<System>) {
-                sys = new System(*this);
-            } else if constexpr (HasDefaultConstructor<System>) {
-                sys = new System();
-            }
-
             SystemRegistered config = {
                 SystemCounter::id<System>(),
                 this->cache(std::move(query)),
-                nullptr, sys, nullptr,
+                nullptr, new System(), nullptr,
                 [](void *ptr) { delete static_cast<System *>(ptr); },
                 getSystemCondition<System>()
             };
@@ -378,13 +321,7 @@ namespace ecs {
             if constexpr (IsSystem<System>) {
                 config.iter = System::iter;
             }
-            if constexpr (MemberRunnable<System>) {
-                static_assert(HasFromWorldConstructor<System> || HasDefaultConstructor<System>,
-                              "member runnable systems must be default constructible or constructible from ecs::World");
-                config.run = [](void *ptr, World &world) {
-                    static_cast<System *>(ptr)->run(world);
-                };
-            } else if constexpr (StaticRunnable<System>) {
+            if constexpr (Runnable<System>) {
                 config.run = reinterpret_cast<void(*)(void *, World &)>(System::run);
             }
             this->phases[pid].systems.push_back(config);
@@ -436,8 +373,17 @@ namespace ecs {
 
         const datastructures::EcsVec<ArchetypeID> &matches(QueryID qid) const;
 
+        template<typename... Filter>
+        static bool filter(ArchetypeView &view, internal::EntityRow row) {
+            return (Filter{}(view, row) && ...);
+        }
 
-        template<typename... Components>
+        template
+        <
+            typename
+            ...
+            Components>
+
         auto fetch() {
             QueryCache cached;
             cached.required<Components...>();
@@ -465,24 +411,49 @@ namespace ecs {
 
         template<typename... Components>
         void add(const Entity entity) {
+            (this->component_registry.registerComponent<Components>(), ...);
+
             const ComponentID cid[] = {reflection::type_id<Components>()...};
 
+            bool result = false;
+
             if constexpr (sizeof...(Components) > 1) {
-                this->add_id_batched(entity, cid, sizeof...(Components));
+                result = this->add_id_batched(entity, cid, sizeof...(Components));
             } else {
-                this->add_id(entity, cid[0]);
+                result = this->add_id(entity, cid[0]);
+            }
+
+            if (result) {
+                auto invoke_constructors = [&]<typename C>() {
+                    if constexpr (reflection::is_complete<C>()) {
+                        if constexpr (HasFromWorldConstructor<C>) {
+                            C *value = this->get<C>(entity);
+                            *value = C(*this);
+                        } else if constexpr (HasDefaultConstructor<C>) {
+                            C *value = this->get<C>(entity);
+                            *value = C();
+                        }
+                    }
+                };
+                (invoke_constructors.template operator()<Components>(), ...);
+
+                auto invoke_on_add = [&]<typename C>() {
+                    if constexpr (HasOnAdd<C>) {
+                        C::onAdd(*this, entity);
+                    }
+                };
+                (invoke_on_add.template operator()<Components>(), ...);
+
+                auto invoke_add = [&]<typename C>() {
+                    if constexpr (HasRequiredComponents<C>) {
+                        C::add(*this, entity);
+                    }
+                };
+                (invoke_add.template operator()<Components>(), ...);
             }
         }
 
     private:
-        void constructComponent(Entity entity, ComponentID cid);
-
-        void runOnAdd(Entity entity, ComponentID cid);
-
-        void runOnRemove(Entity entity, ComponentID cid, const void *value);
-
-        void addRequiredComponents(Entity entity, ComponentID cid);
-
         void removeEntityOfArchetype(internal::Archetype &oldArch,
                                      internal::EntityRow row);
 
@@ -506,11 +477,26 @@ namespace ecs {
     }
 } // namespace ecs
 
+template<typename... Components>
+struct Required {
+    static void add(ecs::World &world, const ecs::Entity entity) {
+        world.add<Components...>(entity);
+    }
+};
+
+
+struct Position : Required<GlobalPosition>, Vec2Reflect {
+    float x, y;
+
+    Position(const float x, const float y) : x(x), y(y) {
+    }
+};
+
+
 template<int>
 struct Interval {
     static Timer timer;
 
-    // ReSharper disable once CppParameterMayBeConstPtrOrRef
     static bool condition(ecs::World &world) {
         return timer.tick(world.deltaTime);
     }
@@ -527,11 +513,6 @@ struct InState {
 };
 
 namespace ecs {
-    template<class... Components>
-    EntityRef::EntityRef(World &tempWorld, Components... all) : Entity(tempWorld.create()), world(tempWorld) {
-        this->set(all...);
-    }
-
     template<typename... Components>
     EntityRef &&EntityRef::add() {
         world.add<Components...>(this->entity());
@@ -558,16 +539,5 @@ namespace ecs {
     EntityRef &&EntityRef::listen(Func &&func) {
         this->world.listen<Event>(this->entity(), func);
         return std::move(*this);
-    }
-
-    template<typename T>
-    T *EntityRef::get() {
-        return this->world.get<T>(this->entity());
-    }
-
-    template<typename... Components>
-    EntityRef EntityRef::make(World &world, Components... all) {
-        const EntityRef ref = world.create().set(all...);
-        return ref;
     }
 }

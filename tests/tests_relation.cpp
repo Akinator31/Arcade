@@ -9,7 +9,6 @@ struct OwnedBy : ecs::DespawnRelated {
 
 Test(relation, simple) {
     ecs::World world;
-    world.relation<ChildOf>();
 
 
     const ecs::Entity parent = world.entity();

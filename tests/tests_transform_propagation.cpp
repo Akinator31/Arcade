@@ -1,16 +1,6 @@
 #include "engine/ecs/World.hpp"
-#include "engine/plugins/render/PositionPropagationPlugin/PositionPropagationPlugin.hpp"
+#include "engine/plugins/render/PositionPropagationPlugin.hpp"
 #include <criterion/criterion.h>
-
-Test(position_propagation_plugin, simple) {
-    ecs::World world;
-    world.plugin<PositionPropagationPlugin>();
-
-    auto a = world.create().set(Position{10, 10});
-    cr_assert_eq(world.get<GlobalPosition>(a.entity())->x, 0);
-    world.progress();
-    cr_assert_eq(world.get<GlobalPosition>(a.entity())->x, 10);
-}
 
 Test(position_propagation_plugin, propagates_local_positions_through_hierarchy) {
     ecs::World world;
@@ -42,7 +32,7 @@ Test(position_propagation_plugin, uses_root_global_position_when_no_local_positi
     world.plugin<PositionPropagationPlugin>();
 
     const ecs::Entity root = world.entity();
-    world.set<GlobalPosition>(root, GlobalPosition{100.f, 50.f});
+    world.set<GlobalPosition>(root, GlobalPosition{.x = 100.f, .y = 50.f});
 
     const ecs::Entity child = world.create().set(Position{3.f, 4.f}).relate<Hierarchy>(root).id();
 

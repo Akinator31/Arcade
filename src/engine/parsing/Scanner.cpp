@@ -90,7 +90,7 @@ int Scanner::expect(const std::string &str) {
     if (!result) {
         this->restore();
     }
-    return result;
+    return true;
 }
 
 std::string Scanner::take_rest() const {

@@ -6,14 +6,14 @@
 
 #include <criterion/criterion.h>
 
-#include "../src/engine/ecs/system/Query.hpp"
+#include "engine/Graphics.hpp"
+#include "engine/ecs/Query.hpp"
 
 struct Player {
 };
 
 Test(observer, base) {
     ecs::World world;
-    world.registerComponent<Player>();
 
     static uint32_t count = 0;
     struct OnAddPlayer : With<Player>, On<Add> {
@@ -51,7 +51,6 @@ Test(observer, base) {
 
 Test(observer, already_created_table) {
     ecs::World world;
-    world.registerComponent<Player>();
 
     const ecs::Entity player = world.entity();
     world.add<Player>(player);
@@ -84,7 +83,6 @@ Test(observer, already_created_table) {
 
 Test(observer, remove_observer) {
     ecs::World world;
-    world.registerComponent<Player>();
 
     static int count = 0;
     SYSTEM(OnAddPlayer, With<Player>, On<Add>) {

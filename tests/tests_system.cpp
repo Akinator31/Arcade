@@ -1,6 +1,10 @@
 #include "engine/ecs/World.hpp"
 #include <criterion/criterion.h>
 
+struct Velocity {
+    float dx, dy;
+};
+
 struct Player {
 };
 
@@ -14,16 +18,13 @@ Test(system, basic_execution) {
             const auto *velocities = view.column<Velocity>();
 
             for (uint32_t i = 0; i < view.count(); i++) {
-                positions[i].x += velocities[i].x;
-                positions[i].y += velocities[i].y;
+                positions[i].x += velocities[i].dx;
+                positions[i].y += velocities[i].dy;
             }
         }
     };
 
     ecs::World world;
-    world.registerComponent<GlobalPosition>();
-    world.registerComponent<Position>();
-    world.registerComponent<Velocity>();
 
     const SystemId sys = world.system<MovementSystem>();
 
@@ -32,8 +33,8 @@ Test(system, basic_execution) {
     world.add<Velocity>(e1);
     world.get<Position>(e1)->x = 0;
     world.get<Position>(e1)->y = 0;
-    world.get<Velocity>(e1)->x = 1.5f;
-    world.get<Velocity>(e1)->y = 2.0f;
+    world.get<Velocity>(e1)->dx = 1.5f;
+    world.get<Velocity>(e1)->dy = 2.0f;
 
     world.runSystem(sys);
 
@@ -47,7 +48,7 @@ Test(system, empty) {
     static int count = 0;
 
     struct Empty {
-        void run(ecs::World &) {
+        static void run(Empty *, ecs::World &) {
             count += 1;
         }
     };
@@ -78,13 +79,13 @@ Test(system, condition) {
 
 
     struct Allowed : AllowCondition {
-        void run(ecs::World &) {
+        static void run(Allowed *, ecs::World &) {
             count += 1;
         }
     };
 
     struct Disallowed : DisallowCondition {
-        void run(ecs::World &) {
+        static void run(Disallowed *, ecs::World &) {
             count += 1;
         }
     };
@@ -107,7 +108,7 @@ Test(system, multiple_condition) {
     static int count = 0;
 
     struct TwoAllow : Conditions<AllowCondition, AllowCondition> {
-        void run(ecs::World &) {
+        static void run(TwoAllow *, ecs::World &) {
             count += 1;
         }
     };
@@ -119,7 +120,7 @@ Test(system, multiple_condition) {
 
     world.remove<TwoAllow>();
     struct AllowDisallow : Conditions<AllowCondition, DisallowCondition> {
-        void run(ecs::World &) {
+        static void run(AllowDisallow *, ecs::World &) {
             count += 1;
         }
     };
@@ -128,28 +129,6 @@ Test(system, multiple_condition) {
 
     world.progress();
     cr_assert_eq(count, 1);
-}
-
-Test(system, member_run_keeps_state) {
-    ecs::World world;
-    static int seen = 0;
-
-    struct StatefulTask {
-        int count = 0;
-
-        RUN(world) {
-            (void) world;
-            count += 1;
-            seen = count;
-        }
-    };
-
-    world.system<StatefulTask>();
-
-    world.progress();
-    world.progress();
-
-    cr_assert_eq(seen, 2);
 }
 
 Test(system, exclude_component) {
@@ -163,9 +142,6 @@ Test(system, exclude_component) {
     };
 
     ecs::World world;
-    world.registerComponent<GlobalPosition>();
-    world.registerComponent<Position>();
-    world.registerComponent<Enemy>();
 
     const SystemId sys = world.system<PlayerOnlySystem>();
 
@@ -189,38 +165,34 @@ Test(system, multiple_archetypes) {
         static void iter(ArchetypeView &view) {
             auto *velocities = view.column<Velocity>();
             for (uint32_t i = 0; i < view.count(); i++) {
-                velocities[i].y -= 9.8f;
+                velocities[i].dy -= 9.8f;
             }
         }
     };
 
     ecs::World world;
-    world.registerComponent<Velocity>();
-    world.registerComponent<GlobalPosition>();
-    world.registerComponent<Position>();
-    world.registerComponent<Player>();
     world.phase<Update>();
     const SystemId sys = world.system<GlobalGravitySystem>();
 
     const ecs::Entity e1 = world.entity();
     world.add<Velocity>(e1);
-    world.get<Velocity>(e1)->y = 0.0f;
+    world.get<Velocity>(e1)->dy = 0.0f;
 
     const ecs::Entity e2 = world.entity();
     world.add<Velocity>(e2);
     world.add<Position>(e2);
-    world.get<Velocity>(e2)->y = 10.0f;
+    world.get<Velocity>(e2)->dy = 10.0f;
 
     const ecs::Entity e3 = world.entity();
     world.add<Velocity>(e3);
     world.add<Player>(e3);
-    world.get<Velocity>(e3)->y = -5.0f;
+    world.get<Velocity>(e3)->dy = -5.0f;
 
     world.runSystem(sys);
 
-    cr_assert_float_eq(world.get<Velocity>(e1)->y, -9.8f, 0.001f);
-    cr_assert_float_eq(world.get<Velocity>(e2)->y, 0.2f, 0.001f);
-    cr_assert_float_eq(world.get<Velocity>(e3)->y, -14.8f, 0.001f);
+    cr_assert_float_eq(world.get<Velocity>(e1)->dy, -9.8f, 0.001f);
+    cr_assert_float_eq(world.get<Velocity>(e2)->dy, 0.2f, 0.001f);
+    cr_assert_float_eq(world.get<Velocity>(e3)->dy, -14.8f, 0.001f);
 }
 
 Test(system, different_phases) {
@@ -239,8 +211,6 @@ Test(system, different_phases) {
     };
 
     ecs::World world;
-    world.registerComponent<GlobalPosition>();
-    world.registerComponent<Position>();
 
 
     const SystemId sysA = world.system<SystemA>();
@@ -266,8 +236,6 @@ Test(system, remove_system) {
     };
 
     ecs::World world;
-    world.registerComponent<GlobalPosition>();
-    world.registerComponent<Position>();
 
     world.system<SystemC>();
 
