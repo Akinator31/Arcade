@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <string>
 
-#include "engine/reflection/rayflect.hpp"
+#include "engine/reflection/Rayflect.hpp"
 
 namespace ecs {
     class World;

@@ -1,7 +1,7 @@
 #include <criterion/criterion.h>
 #include "engine/parsing/JsonParser.hpp"
 #include "engine/parsing/JsonSerializer.hpp"
-#include "engine/reflection/rayflect.hpp"
+#include "engine/reflection/Rayflect.hpp"
 
 struct TestStruct {
     float x;
