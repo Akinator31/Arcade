@@ -6,7 +6,7 @@
 
 #include <criterion/criterion.h>
 
-#include "engine/ecs/Query.hpp"
+#include "../src/engine/ecs/system/Query.hpp"
 
 struct Damaged {
     int value;

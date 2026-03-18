@@ -4,8 +4,8 @@
 
 #pragma once
 #include <vector>
-#include "type.hpp"
-#include "internal/Archetype.hpp"
+#include "../entity/type.hpp"
+#include "../internal/Archetype.hpp"
 #include "engine/reflection/type_id.hpp"
 
 namespace ecs {

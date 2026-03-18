@@ -1,7 +1,7 @@
 #pragma once
 
 #include <utility>
-#include "engine/ecs/type.hpp"
+#include "engine/ecs/entity/type.hpp"
 #include "engine/datastructures/EcsVec.hpp"
 
 namespace ecs {

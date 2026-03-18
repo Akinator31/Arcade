@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "World.hpp"
+#include "engine/ecs/World.hpp"
 #include "engine/parsing/Scanner.hpp"
 
 namespace {

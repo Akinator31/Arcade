@@ -1,6 +1,6 @@
 #pragma once
 #include "type.hpp"
-#include "World.hpp"
+#include "../World.hpp"
 #include "engine/parsing/JsonParser.hpp"
 
 struct ComponentJson {

@@ -1,8 +1,7 @@
 #pragma once
 #include "Relation.hpp"
 #include "engine/datastructures/EcsVec.hpp"
-#include "type.hpp"
-#include "engine/reflection/rayflect.hpp"
+#include "engine/ecs/entity/type.hpp"
 #include "arcade/Types.hpp"
 #include "engine/reflection/type_id.hpp"
 

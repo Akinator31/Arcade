@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/ecs/type.hpp"
+#include "../../entity/type.hpp"
 #include "engine/reflection/type_id.hpp"
 #include <cstddef>
 #include <iostream>

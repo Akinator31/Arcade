@@ -1,8 +1,5 @@
 #pragma once
 
-#include <vector>
-#include <tuple>
-
 namespace ecs {
     class World;
     struct Entity;

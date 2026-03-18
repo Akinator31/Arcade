@@ -1,5 +1,5 @@
 #include "Relation.hpp"
-#include "World.hpp"
+#include "engine/ecs/World.hpp"
 
 namespace ecs {
 

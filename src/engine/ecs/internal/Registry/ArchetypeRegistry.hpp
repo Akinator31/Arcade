@@ -1,6 +1,6 @@
 #pragma once
-#include "Archetype.hpp"
-#include "engine/ecs/type.hpp"
+#include "../Archetype.hpp"
+#include "../../entity/type.hpp"
 
 #include <unordered_map>
 #include <vector>

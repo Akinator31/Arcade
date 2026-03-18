@@ -1,5 +1,5 @@
 #include "ArchetypeRegistry.hpp"
-#include "Archetype.hpp"
+#include "engine/ecs/internal/Archetype.hpp"
 #include "engine/ecs/World.hpp"
 
 size_t EntityTypeHasher::operator()(const ecs::EntityType &e) const noexcept {

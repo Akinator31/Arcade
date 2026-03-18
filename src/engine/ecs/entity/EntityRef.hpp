@@ -1,7 +1,7 @@
 #pragma once
 
 #include "type.hpp"
-#include "World.hpp"
+#include "../World.hpp"
 
 namespace ecs {
     class World;

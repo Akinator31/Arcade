@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Query.hpp"
-#include "internal/Archetype.hpp"
+#include "../system/Query.hpp"
+#include "../internal/Archetype.hpp"
 
 namespace ecs {
     class World;

@@ -3,7 +3,7 @@
 #include <ranges>
 #include <unordered_map>
 
-#include "../type.hpp"
+#include "../../entity/type.hpp"
 #include "engine/datastructures/SparseSet.hpp"
 #include "engine/reflection/TypeCounter.hpp"
 

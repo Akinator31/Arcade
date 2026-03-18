@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../datastructures/IndiceAlocator.hpp"
-#include "../type.hpp"
+#include "engine/datastructures/IndiceAlocator.hpp"
+#include "engine/ecs/internal/Registry/EntityRegistry.hpp"
 
 namespace ecs::internal {
 struct EntityRecord {
