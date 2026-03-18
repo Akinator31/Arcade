@@ -55,6 +55,12 @@ if (BUILD_PLATFORM_LIBS)
 
     target_compile_options(sfml_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
     target_link_options(sfml_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+
+    set_target_properties(sfml_api PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+            OUTPUT_NAME arcade_sfml
+            PREFIX ""
+    )
 endif ()
 
 if (BUILD_CORE_PROGRAM)
@@ -75,6 +81,12 @@ if (BUILD_GAMES)
     target_link_libraries(game_example PRIVATE arcade_shared)
     target_compile_options(game_example PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
     target_link_options(game_example PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+
+    set_target_properties(game_example PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+            OUTPUT_NAME arcade_game_example
+            PREFIX ""
+    )
 endif ()
 
 if (BUILD_TESTS)
