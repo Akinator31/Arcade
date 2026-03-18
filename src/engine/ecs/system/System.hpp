@@ -107,12 +107,23 @@ concept HasRequired = requires(System system, Query &query)
 };
 
 template<typename System>
-concept Runnable = requires(ecs::World &world, System *sys)
+concept MemberRunnable = requires(ecs::World &world, System &sys)
+{
+    {
+        sys.run(world)
+    };
+};
+
+template<typename System>
+concept StaticRunnable = requires(ecs::World &world, System *sys)
 {
     {
         System::run(sys, world)
     };
 };
+
+template<typename System>
+concept Runnable = MemberRunnable<System> || StaticRunnable<System>;
 
 template<typename System>
 concept IsSystemCondition = requires(ecs::World &world)
@@ -156,7 +167,7 @@ concept HasExcluded = requires(System system, Query &query)
 };
 
 #define ITER(view) static void iter(ArchetypeView &view)
-#define RUN(type, self, world) static void run(type *self, ecs::World &world)
+#define RUN(world) void run(ecs::World &world)
 #define OBSERVE(table, row) static void observe(ecs::internal::Archetype &table, ecs::internal::EntityRow row)
 #define SYSTEM(name, ...) struct name : __VA_ARGS__
 

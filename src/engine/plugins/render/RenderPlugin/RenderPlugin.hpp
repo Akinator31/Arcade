@@ -13,12 +13,20 @@ SYSTEM(RenderRectSys, With<GlobalPosition, Size, Color>) {
         const auto *positions = view.column<GlobalPosition>();
         const auto *sizes = view.column<Size>();
         const auto *colors = view.column<Color>();
-        auto *api = view.world.singleton_get<GraphicsApi>();
-
-        const auto func = get_virtual<void (*)(void *, GlobalPosition, Size, Color)>(api, 19);
 
         for (uint i = 0; i < view.count(); i++) {
-            func(api, positions[i], sizes[i], colors[i]);
+            view.world.api->drawRect(positions[i], sizes[i], colors[i]);
+        }
+    }
+};
+
+SYSTEM(RenderSpriteSys, With<GlobalPosition, Sprite>, On<Render>) {
+    ITER(view) {
+        const auto *positions = view.column<GlobalPosition>();
+        const auto *sprites = view.column<Sprite>();
+
+        for (uint i = 0; i < view.count(); i++) {
+            view.world.api->drawSprite(positions[i], sprites[i]);
         }
     }
 };

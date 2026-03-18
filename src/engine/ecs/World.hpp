@@ -14,6 +14,7 @@
 #include "components/CoreComponents.hpp"
 #include "entity/EntityRef.hpp"
 #include "Plugin.hpp"
+#include "arcade/GraphicsApi.hpp"
 #include "utils/TablesReader.hpp"
 
 namespace ecs {
@@ -28,6 +29,7 @@ namespace ecs {
         internal::EntityRegistry entity_registry;
         internal::ComponentRegistry component_registry;
         internal::ArchetypeRegistry archetype_registry;
+        GraphicsApi *api = nullptr;
 
         float deltaTime{};
 
@@ -331,10 +333,18 @@ namespace ecs {
                 System::without::exclude(query);
             }
 
+            System *sys = nullptr;
+
+            if constexpr (HasFromWorldConstructor<System>) {
+                sys = new System(*this);
+            } else if constexpr (HasDefaultConstructor<System>) {
+                sys = new System();
+            }
+
             SystemRegistered config = {
                 SystemCounter::id<System>(),
                 this->cache(std::move(query)),
-                nullptr, new System(), nullptr,
+                nullptr, sys, nullptr,
                 [](void *ptr) { delete static_cast<System *>(ptr); },
                 getSystemCondition<System>()
             };
@@ -368,7 +378,13 @@ namespace ecs {
             if constexpr (IsSystem<System>) {
                 config.iter = System::iter;
             }
-            if constexpr (Runnable<System>) {
+            if constexpr (MemberRunnable<System>) {
+                static_assert(HasFromWorldConstructor<System> || HasDefaultConstructor<System>,
+                              "member runnable systems must be default constructible or constructible from ecs::World");
+                config.run = [](void *ptr, World &world) {
+                    static_cast<System *>(ptr)->run(world);
+                };
+            } else if constexpr (StaticRunnable<System>) {
                 config.run = reinterpret_cast<void(*)(void *, World &)>(System::run);
             }
             this->phases[pid].systems.push_back(config);
@@ -511,6 +527,11 @@ struct InState {
 };
 
 namespace ecs {
+    template<class... Components>
+    EntityRef::EntityRef(World &tempWorld, Components... all) : Entity(tempWorld.create()), world(tempWorld) {
+        this->set(all...);
+    }
+
     template<typename... Components>
     EntityRef &&EntityRef::add() {
         world.add<Components...>(this->entity());
@@ -542,5 +563,11 @@ namespace ecs {
     template<typename T>
     T *EntityRef::get() {
         return this->world.get<T>(this->entity());
+    }
+
+    template<typename... Components>
+    EntityRef EntityRef::make(World &world, Components... all) {
+        const EntityRef ref = world.create().set(all...);
+        return ref;
     }
 }

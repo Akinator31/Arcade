@@ -59,7 +59,7 @@ USize SfmlGraphicsApi::getWindowSize() const {
 }
 
 bool SfmlGraphicsApi::isKeyPressed(const KeyboardCode code) {
-    auto sfmlCode = sf::Keyboard::Key::Unknown;
+    sf::Keyboard::Key sfmlCode;
 
 #define key(name)                                                                                  \
     case KeyboardCode::name:                                                                       \
@@ -209,7 +209,7 @@ GraphicsApi *create() {
     return new SfmlGraphicsApi();
 }
 
-void destroy(GraphicsApi *api) {
+void destroy(const GraphicsApi *api) {
     delete api;
 }
 }

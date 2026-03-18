@@ -1,7 +1,6 @@
 #include "JsonParser.hpp"
 
 #include <cctype>
-#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <utility>
@@ -166,14 +165,12 @@ std::optional<JsonValue> JsonDeserializer::parseValueObject() {
     while (!scanner.isDone()) {
         auto key = this->parseValueString();
         if (!key.has_value()) {
-            object = JsonValue::makeNull();
             return std::nullopt;
         }
         JsonCString owned_key(key.value());
 
         scanner.skip_whitespace();
         if (!scanner.expect(':')) {
-            object = JsonValue::makeNull();
             return std::nullopt;
         }
         scanner.advance();
@@ -181,7 +178,6 @@ std::optional<JsonValue> JsonDeserializer::parseValueObject() {
 
         auto child = this->parseAnyValue();
         if (!child.has_value()) {
-            object = JsonValue::makeNull();
             return std::nullopt;
         }
 
@@ -197,14 +193,12 @@ std::optional<JsonValue> JsonDeserializer::parseValueObject() {
             return object;
         }
         if (!scanner.expect(',')) {
-            object = JsonValue::makeNull();
             return std::nullopt;
         }
         scanner.advance();
         scanner.skip_whitespace();
     }
 
-    object = JsonValue::makeNull();
     return std::nullopt;
 }
 
@@ -225,7 +219,6 @@ std::optional<JsonValue> JsonDeserializer::parseValueArray() {
     while (!scanner.isDone()) {
         auto child = this->parseAnyValue();
         if (!child.has_value()) {
-            array = JsonValue::makeNull();
             return std::nullopt;
         }
         array.value.array->push_back(std::move(child.value()));
@@ -236,14 +229,11 @@ std::optional<JsonValue> JsonDeserializer::parseValueArray() {
             return array;
         }
         if (!scanner.expect(',')) {
-            array = JsonValue::makeNull();
             return std::nullopt;
         }
         scanner.advance();
         scanner.skip_whitespace();
     }
-
-    array = JsonValue::makeNull();
     return std::nullopt;
 }
 

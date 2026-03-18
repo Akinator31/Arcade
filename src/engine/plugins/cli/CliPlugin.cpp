@@ -151,7 +151,7 @@ const char *CliPlugin::store_name(const std::string &name) {
     return stored_names.back().c_str();
 }
 
-void CliRuntimeSystem::run(CliRuntimeSystem *, ecs::World &world) {
+void CliRuntimeSystem::run(ecs::World &world) {
     if (auto *cli = world.getPlugin<CliPlugin>()) {
         cli->tick(world);
     }

@@ -1,5 +1,4 @@
 #include <iostream>
-
 #include "core/dynamic/GameLoader.hpp"
 #include "core/dynamic/GraphicsLoader.hpp"
 

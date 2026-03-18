@@ -47,7 +47,7 @@ Test(system, empty) {
     static int count = 0;
 
     struct Empty {
-        static void run(Empty *, ecs::World &) {
+        void run(ecs::World &) {
             count += 1;
         }
     };
@@ -78,13 +78,13 @@ Test(system, condition) {
 
 
     struct Allowed : AllowCondition {
-        static void run(Allowed *, ecs::World &) {
+        void run(ecs::World &) {
             count += 1;
         }
     };
 
     struct Disallowed : DisallowCondition {
-        static void run(Disallowed *, ecs::World &) {
+        void run(ecs::World &) {
             count += 1;
         }
     };
@@ -107,7 +107,7 @@ Test(system, multiple_condition) {
     static int count = 0;
 
     struct TwoAllow : Conditions<AllowCondition, AllowCondition> {
-        static void run(TwoAllow *, ecs::World &) {
+        void run(ecs::World &) {
             count += 1;
         }
     };
@@ -119,7 +119,7 @@ Test(system, multiple_condition) {
 
     world.remove<TwoAllow>();
     struct AllowDisallow : Conditions<AllowCondition, DisallowCondition> {
-        static void run(AllowDisallow *, ecs::World &) {
+        void run(ecs::World &) {
             count += 1;
         }
     };
@@ -128,6 +128,28 @@ Test(system, multiple_condition) {
 
     world.progress();
     cr_assert_eq(count, 1);
+}
+
+Test(system, member_run_keeps_state) {
+    ecs::World world;
+    static int seen = 0;
+
+    struct StatefulTask {
+        int count = 0;
+
+        RUN(world) {
+            (void) world;
+            count += 1;
+            seen = count;
+        }
+    };
+
+    world.system<StatefulTask>();
+
+    world.progress();
+    world.progress();
+
+    cr_assert_eq(seen, 2);
 }
 
 Test(system, exclude_component) {

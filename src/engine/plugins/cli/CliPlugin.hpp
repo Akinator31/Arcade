@@ -32,7 +32,7 @@ struct CliPlugin;
 SYSTEM(CliRuntimeSystem, On<PreUpdate>) {
     using CommandHandler = std::function<void(CliPlugin &, CliSession &, ecs::World &, Scanner &, std::ostream &)>;
 
-    RUN(CliRuntimeSystem,, world);
+    RUN(world);
 };
 
 struct CliPlugin {

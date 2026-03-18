@@ -1,7 +1,8 @@
 #pragma once
 
 #include "type.hpp"
-#include "../World.hpp"
+#include "engine/ecs/World.hpp"
+#include "engine/ecs/World.hpp"
 
 namespace ecs {
     class World;
@@ -12,6 +13,9 @@ namespace ecs {
     public:
         explicit EntityRef(World &world, const Entity entity) : Entity(entity), world(world) {
         }
+
+        template<class... Components>
+        explicit EntityRef(World &tempWorld, Components... all);
 
         template<typename... Components>
         EntityRef &&add();
@@ -30,6 +34,10 @@ namespace ecs {
 
         template<typename T>
         T *get();
+
+        template<class... Components>
+        static EntityRef make(World &world, Components... all);
+
 
         [[nodiscard]] Entity entity() const {
             return {this->index, this->generation};

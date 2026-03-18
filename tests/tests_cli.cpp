@@ -504,7 +504,7 @@ struct CliServerTickCounter {
 };
 
 SYSTEM(CliServerTickSystem, On<Update>) {
-    RUN(CliServerTickSystem,, world) {
+    RUN(world) {
         (void) world;
         CliServerTickCounter::value++;
     }
