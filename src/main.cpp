@@ -1,8 +1,7 @@
-#include <exception>
 #include <iostream>
 
-#include "dynamic/GameLoader.hpp"
-#include "dynamic/GraphicsLoader.hpp"
+#include "core/dynamic/GameLoader.hpp"
+#include "core/dynamic/GraphicsLoader.hpp"
 
 int main(const int argc, char **argv) {
     if (argc != 3) {

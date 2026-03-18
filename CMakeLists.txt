@@ -24,16 +24,16 @@ if (ENABLE_SANITIZERS)
     list(APPEND ARCADE_SANITIZER_LINK_OPTIONS -fsanitize=address,undefined)
 endif ()
 
-file(GLOB_RECURSE ECS_SRC CONFIGURE_DEPENDS "engine/*.cpp")
+file(GLOB_RECURSE ECS_SRC CONFIGURE_DEPENDS "src/engine/*.cpp")
 file(GLOB_RECURSE TEST_SRC CONFIGURE_DEPENDS "tests/*.cpp")
 
 add_library(arcade_shared INTERFACE)
-target_include_directories(arcade_shared INTERFACE shared .)
+target_include_directories(arcade_shared INTERFACE src/shared src)
 
 if (BUILD_GAMES OR BUILD_TESTS)
     add_library(arcade_ecs OBJECT ${ECS_SRC})
     set_target_properties(arcade_ecs PROPERTIES POSITION_INDEPENDENT_CODE ON)
-    target_include_directories(arcade_ecs PUBLIC shared .)
+    target_include_directories(arcade_ecs PUBLIC src/shared src)
     target_compile_options(arcade_ecs PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
 endif ()
 
@@ -41,11 +41,11 @@ if (BUILD_PLATFORM_LIBS)
     find_package(SFML 3 REQUIRED COMPONENTS System Window Graphics)
 
     add_library(sfml_api SHARED
-            graphics/sfml/SfmlApi.cpp
-            graphics/sfml/SfmlApi.hpp
+            src/graphics/sfml/SfmlApi.cpp
+            src/graphics/sfml/SfmlApi.hpp
     )
 
-    target_include_directories(sfml_api PRIVATE shared graphics/sfml)
+    target_include_directories(sfml_api PRIVATE src/shared src/graphics/sfml)
     target_link_libraries(sfml_api PRIVATE arcade_shared)
 
     target_link_libraries(sfml_api
@@ -58,8 +58,8 @@ if (BUILD_PLATFORM_LIBS)
 endif ()
 
 if (BUILD_CORE_PROGRAM)
-    add_executable(arcade core/main.cpp)
-    target_include_directories(arcade PRIVATE shared core)
+    add_executable(arcade src/main.cpp)
+    target_include_directories(arcade PRIVATE src/shared src/core)
     target_compile_options(arcade PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
     target_link_options(arcade PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
     target_link_libraries(arcade PRIVATE ${CMAKE_DL_LIBS})
@@ -67,11 +67,11 @@ endif ()
 
 if (BUILD_GAMES)
     add_library(game_example SHARED
-            games/example/ExampleGame.cpp
-            games/example/ExampleGame.hpp
+            src/games/example/ExampleGame.cpp
+            src/games/example/ExampleGame.hpp
     )
     target_sources(game_example PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
-    target_include_directories(game_example PRIVATE shared . games/example)
+    target_include_directories(game_example PRIVATE src/shared src src/games/example)
     target_link_libraries(game_example PRIVATE arcade_shared)
     target_compile_options(game_example PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
     target_link_options(game_example PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
@@ -92,7 +92,7 @@ if (BUILD_TESTS)
         )
 
         target_link_options(unittests PRIVATE --coverage ${ARCADE_SANITIZER_LINK_OPTIONS})
-        target_include_directories(unittests PRIVATE shared . tests)
+        target_include_directories(unittests PRIVATE src/shared src tests)
         target_link_libraries(unittests PRIVATE arcade_shared ${CRITERION_LIB} ${CMAKE_DL_LIBS})
 
         add_test(NAME unittests COMMAND unittests)
