@@ -49,10 +49,10 @@ SYSTEM(HoveredSys, With<HoveredSensorComponent>, On<PostUpdate>) {
                     return;
                 }
             } else {
-                view.world.command([entity = view.entity(i)](ecs::World &world) {
-                        world.remove<HoveredComponent>(entity);
-                        world.emit(entity, MouseExitEvent{});
-                    });
+                if (view.world.has<HoveredComponent>(view.entity(i))) {
+                    view.world.remove<HoveredComponent>(view.entity(i));
+                    view.world.emit(view.entity(i), MouseExitEvent{});
+                }
             }
         }
   }
@@ -93,9 +93,10 @@ SYSTEM(TrackMouseOnPressedSys, With<TrackMouseOnPressedComponent, PressedCompone
   ITER(view) {
       const auto [x, y] = view.world.api->getMousePosition();
       const auto *sizes = view.column<Size>();
+      auto *positions = view.column<Position>();
 
       for (uint i = 0; i < view.count(); i++) {
-          view.world.set(view.entity(i), Position {static_cast<float>(x) - sizes[i].width / 2 , static_cast<float>(y) - sizes[i].height / 2});
+          positions[i] = Position {static_cast<float>(x) - sizes[i].width / 2 , static_cast<float>(y) - sizes[i].height / 2};
       }
   }
 };
