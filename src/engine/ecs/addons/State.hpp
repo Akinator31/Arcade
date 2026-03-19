@@ -19,4 +19,3 @@ public:
         return static_cast<T>(this->states.get(StateCounter::id<T>()));
     }
 };
-

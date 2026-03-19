@@ -1,6 +1,9 @@
 #include "engine/ecs/World.hpp"
 #include <criterion/criterion.h>
 
+#include "plugins/DefaultPlugins.hpp"
+#include "plugins/render/UiPlugin/UiPlugin.hpp"
+
 struct Player {
 };
 
