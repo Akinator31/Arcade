@@ -1,6 +1,5 @@
 #pragma once
 #include <functional>
-
 #include "system/Query.hpp"
 #include "internal/Registry/ArchetypeRegistry.hpp"
 #include "internal/Registry/EntityRegistry.hpp"
@@ -16,8 +15,10 @@
 #include "components/CoreComponents.hpp"
 #include "entity/EntityRef.hpp"
 #include "Plugin.hpp"
-#include "arcade/GraphicsApi.hpp"
+#include "arcade/IGameModule.hpp"
+#include "arcade/IDisplayModule.hpp"
 #include "utils/TablesReader.hpp"
+
 
 namespace ecs {
     class World : public internal::EventRegistry, public StateRegistry, public SingletonRegistry {
@@ -25,14 +26,14 @@ namespace ecs {
         std::vector<Phase> phases;
         std::vector<PluginRecord> loaded_plugins;
         std::unordered_map<std::string, Entity> entity_name_to_entity;
-        std::vector<std::function<void (World &)>> commands;
+        std::vector<std::function<void (World &)> > commands;
 
     public:
         std::vector<QueryCache> queries;
         internal::EntityRegistry entity_registry;
         internal::ComponentRegistry component_registry;
         internal::ArchetypeRegistry archetype_registry;
-        GraphicsApi *api = nullptr;
+        IDisplayModule *api = nullptr;
 
         float deltaTime{};
 

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "DynamicLoader.hpp"
-#include "arcade/GraphicsApi.hpp"
+#include "arcade/IDisplayModule.hpp"
 
-using Create = Member<GraphicsApi* (*)(), "create">;
-using Destroy = Member<void (*)(GraphicsApi *), "destroy">;
+using Create = Member<IDisplayModule* (*)(), "create">;
+using Destroy = Member<void (*)(IDisplayModule *), "destroy">;
 using GraphicsApiLoader = DynamicLoader<Create, Destroy>;

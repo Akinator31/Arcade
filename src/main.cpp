@@ -1,6 +1,7 @@
 #include <iostream>
 #include "core/dynamic/GameLoader.hpp"
 #include "core/dynamic/GraphicsLoader.hpp"
+#include "arcade/IDisplayModule.hpp"
 
 int main(const int argc, char **argv) {
     if (argc != 3) {
@@ -11,8 +12,8 @@ int main(const int argc, char **argv) {
     GraphicsApiLoader graphics_loader(argv[1]);
     GameLoader game_loader(argv[2]);
 
-    GraphicsApi *api = graphics_loader.call<Create>();
-    IGame *game = game_loader.call<LoadGame>();
+    IDisplayModule *api = graphics_loader.call<Create>();
+    IGameModule *game = game_loader.call<LoadGame>();
 
     api->init();
     while (api->isWindowOpen()) {

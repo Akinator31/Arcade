@@ -3,7 +3,7 @@
 #include <functional>
 #include <utility>
 
-#include "arcade/IGame.hpp"
+#include "arcade/IGameModule.hpp"
 #include "datastructures/SparseSet.hpp"
 #include "ecs/World.hpp"
 #include "reflection/TypeCounter.hpp"
@@ -12,12 +12,13 @@
 struct SceneFamily;
 using SceneTypeCounter = reflection::TypeCounter<SceneFamily>;
 
-class Engine : IGame {
+class Engine : IGameModule {
     datastructures::SparseSet<ecs::World *> scenes;
     ecs::World *currentScene = nullptr;
     std::string name = "NoName";
     std::chrono::steady_clock::time_point lastFrameTime = std::chrono::steady_clock::now();
     bool hasRenderedFrame = false;
+    std::vector<Resource> _resources;
 
     template<typename Scene>
     static uint16_t id() {
@@ -38,7 +39,8 @@ class Engine : IGame {
     }
 
 public:
-    explicit Engine(std::string name, const std::function<void(Engine &)> &init) : name(std::move(name)) {
+    explicit Engine(std::string name, const std::function<void(Engine &)> &init,
+                    const std::vector<Resource> &resources) : name(std::move(name)), _resources(resources) {
         init(*this);
     }
 
@@ -72,7 +74,11 @@ public:
         return this->name;
     };
 
-    void update(GraphicsApi *api) override {
+    const std::vector<Resource> &getResources() override {
+        return this->_resources;
+    };
+
+    void update(IDisplayModule *api) override {
         const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
 
         this->currentScene->api = api;
