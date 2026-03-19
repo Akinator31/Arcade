@@ -1,4 +1,6 @@
 #pragma once
+#include <functional>
+
 #include "system/Query.hpp"
 #include "internal/Registry/ArchetypeRegistry.hpp"
 #include "internal/Registry/EntityRegistry.hpp"
@@ -23,6 +25,7 @@ namespace ecs {
         std::vector<Phase> phases;
         std::vector<PluginRecord> loaded_plugins;
         std::unordered_map<std::string, Entity> entity_name_to_entity;
+        std::vector<std::function<void (World &)>> commands;
 
     public:
         std::vector<QueryCache> queries;
@@ -108,6 +111,10 @@ namespace ecs {
         void clearEntityName(Entity entity);
 
         [[nodiscard]] std::optional<Entity> findEntityByName(const std::string &name) const;
+
+        void flush();
+
+        void command(const std::function<void (World &)> &);
 
         template<typename T>
         void remove(const Entity entity) {

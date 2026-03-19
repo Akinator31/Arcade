@@ -338,6 +338,17 @@ namespace ecs {
         return std::nullopt;
     }
 
+    void World::command(const std::function<void(World&)> &command) {
+        this->commands.push_back(command);
+    }
+
+    void World::flush() {
+        for (auto &command: this->commands) {
+            command(*this);
+        }
+        commands.clear();
+    }
+
     void World::kill(const Entity entity) {
         if (const internal::EntityRecord &record = this->entity_registry.getRecord(entity); record.archetypeId != 0) {
             if (this->has<Name>(entity)) {
@@ -407,6 +418,7 @@ namespace ecs {
             if (run) {
                 run(value, *this);
             }
+            this->flush();
         }
     }
 
