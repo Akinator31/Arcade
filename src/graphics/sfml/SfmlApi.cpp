@@ -8,7 +8,7 @@
 void SfmlGraphicsApi::init() {
     this->window.create(sf::VideoMode::getDesktopMode(), "game", sf::Style::Default);
     this->window.setVerticalSyncEnabled(false);
-    this->window.setFramerateLimit(120);
+    this->window.setFramerateLimit(240);
 }
 
 void SfmlGraphicsApi::shutdown() {

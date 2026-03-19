@@ -38,6 +38,7 @@ struct RenderPlugin {
         world.registerComponent<Size>();
         world.registerComponent<Color>();
         world.system<RenderRectSys>();
+        world.system<RenderSpriteSys>();
     }
 
     void unload(ecs::World &world) {

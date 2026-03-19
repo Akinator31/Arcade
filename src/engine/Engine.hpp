@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <functional>
 #include <utility>
 
@@ -15,11 +16,14 @@ class Engine : IGame {
     datastructures::SparseSet<ecs::World *> scenes;
     ecs::World *currentScene = nullptr;
     std::string name = "NoName";
+    std::chrono::steady_clock::time_point lastFrameTime = std::chrono::steady_clock::now();
+    bool hasRenderedFrame = false;
 
     template<typename Scene>
     static uint16_t id() {
         return SceneTypeCounter::id<Scene>();
     }
+
 
     template<typename Scene>
     ecs::World *scenePtr() {
@@ -37,6 +41,7 @@ public:
     explicit Engine(std::string name, const std::function<void(Engine &)> &init) : name(std::move(name)) {
         init(*this);
     }
+
 
     ~Engine() override {
         for (const ecs::World *scene: this->scenes.getDense()) {
@@ -68,7 +73,14 @@ public:
     };
 
     void update(GraphicsApi *api) override {
+        const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+
         this->currentScene->api = api;
+        this->currentScene->deltaTime = this->hasRenderedFrame
+                                            ? std::chrono::duration<float>(now - this->lastFrameTime).count()
+                                            : 0.f;
+        this->lastFrameTime = now;
+        this->hasRenderedFrame = true;
         this->progress();
     };
 };
