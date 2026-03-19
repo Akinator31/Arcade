@@ -1,18 +1,20 @@
 #pragma once
 #include "cli/CliPlugin.hpp"
 #include "engine/ecs/World.hpp"
-#include "physics/PhysicsPlugin.hpp"
 #include "render/PositionPropagationPlugin/PositionPropagationPlugin.hpp"
 #include "render/RenderPlugin/RenderPlugin.hpp"
 #include "sprite/SpritePlugin.hpp"
+#include "physics/PhysicsPlugin.hpp"
+#include "render/UiPlugin/UiPlugin.hpp"
 
 struct DefaultPlugin {
     void load(ecs::World &world) {
         world.plugin<PositionPropagationPlugin>();
-        world.plugin<PhysicsPlugin>();
         world.plugin<RenderPlugin>();
-        world.plugin<SpritePlugin>();
+        world.plugin<PhysicsPlugin>();
         world.plugin<CliPlugin>(CliMode::Server, 4040);
+        world.plugin<UiPlugin>();
+        world.plugin<SpritePlugin>();
     }
 
     void unload(ecs::World &world) {
