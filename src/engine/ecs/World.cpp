@@ -168,7 +168,7 @@ namespace ecs {
 
     void World::runOnRemove(const Entity entity, const ComponentID cid, const void *value) {
         if (const auto &record = this->component_registry.getRecord(cid); record.onRemove != nullptr &&
-            value != nullptr) {
+                                                                          value != nullptr) {
             record.onRemove(*this, entity, value);
         }
     }
@@ -254,6 +254,42 @@ namespace ecs {
         this->set(entity, Name(std::format("entity({}, {})", entity.index, entity.generation)));
 
         return entity;
+    }
+
+    Entity World::clone(const Entity entity) {
+        const Entity newEntity = this->entity();
+        const internal::EntityRecord &entityRecord = this->entity_registry.getRecord(entity);
+        internal::EntityRecord &newEntityRecord = this->entity_registry.getRecord(newEntity);
+        internal::Archetype &source_archetype = this->getArchetypes()[entityRecord.archetypeId];
+        internal::Archetype &new_entity_archetype = this->getArchetypes()[newEntityRecord.archetypeId];
+
+        this->clearEntityName(newEntity);
+        for (const ComponentID cid: new_entity_archetype.getType()) {
+            if (new_entity_archetype.stores(cid)) {
+                this->runOnRemove(newEntity, cid, new_entity_archetype.getComponent(newEntityRecord.row, cid));
+            }
+        }
+        this->removeEntityOfArchetype(new_entity_archetype, newEntityRecord.row);
+
+        newEntityRecord.archetypeId = entityRecord.archetypeId;
+        newEntityRecord.row = source_archetype.cloneEntity(entityRecord.row, newEntity);
+
+        if (this->has<Children>(newEntity)) {
+            this->get<Children>(newEntity)->entities.size = 0;
+        }
+
+        if (this->has<Name>(newEntity)) {
+            Name *name = this->get<Name>(newEntity);
+            name->value = strdup(ecs::World::makeEntityName(newEntity).c_str());
+            this->syncEntityName(newEntity);
+        }
+
+        for (const auto &[parent, child]: this->iterRelated<Hierarchy, false>(entity)) {
+            const Entity newChild = this->clone(child);
+            this->relate<Hierarchy>(newChild, newEntity);
+        }
+
+        return newEntity;
     }
 
     EntityRef World::create() {
