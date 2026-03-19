@@ -29,7 +29,7 @@ namespace ecs::internal {
         }
     }
 
-    EntityRow Archetype::addEntity(const Entity entity) {
+    EntityRow Archetype::appendEntity(const Entity entity) {
         const uint32_t count = this->entities.size;
 
         const bool needs_realloc = count >= this->entities.capacity;
@@ -44,11 +44,38 @@ namespace ecs::internal {
             }
         }
 
-        for (const auto &sys: this->onAdd) {
-            sys(*this, count);
-        }
         return static_cast<EntityRow>(count);
     }
+
+    EntityRow Archetype::addEntity(const Entity entity) {
+        const EntityRow row = this->appendEntity(entity);
+
+        for (const auto &sys: this->onAdd) {
+            sys(*this, row);
+        }
+        return row;
+    }
+
+    EntityRow Archetype::cloneEntity(const EntityRow row, const Entity entity) {
+        const EntityRow new_row = this->appendEntity(entity);
+
+        for (const auto component: this->type) {
+            if (!this->stores(component)) {
+                continue;
+            }
+
+            auto &[buffer, size, _] = this->columns.get(component);
+            auto *base = static_cast<char *>(buffer);
+            std::memcpy(base + new_row * size, base + row * size, size);
+        }
+
+        for (const auto &sys: this->onAdd) {
+            sys(*this, new_row);
+        }
+
+        return new_row;
+    }
+
 
     std::optional<Entity> Archetype::removeEntity(const EntityRow row) {
         const std::size_t last = this->entities.size - 1;
