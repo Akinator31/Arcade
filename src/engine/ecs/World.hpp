@@ -56,7 +56,7 @@ namespace ecs {
 
         template<typename T>
         void removePlugin() {
-            if (const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
+            if (const PluginId id = reflection::TypeCounter<PluginFamily>::id<T>();
                 id < this->loaded_plugins.size() && this->loaded_plugins[id].instance != nullptr) {
                 this->loaded_plugins[id].unload(this->loaded_plugins[id].instance, *this);
                 this->loaded_plugins[id].destroy(this->loaded_plugins[id].instance);
@@ -66,7 +66,7 @@ namespace ecs {
 
         template<typename T>
         bool hasPlugin() const {
-            if (const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
+            if (const PluginId id = reflection::TypeCounter<PluginFamily>::id<T>();
                 id < this->loaded_plugins.size()) {
                 return this->loaded_plugins[id].instance != nullptr;
             }
@@ -75,22 +75,31 @@ namespace ecs {
 
         template<typename T>
         T *getPlugin() const {
-            if (const PluginId id = reflection::TypeCounter<PluginFamily>::template id<T>();
+            if (const PluginId id = reflection::TypeCounter<PluginFamily>::id<T>();
                 id < this->loaded_plugins.size() && this->loaded_plugins[id].instance != nullptr) {
                 return static_cast<T *>(this->loaded_plugins[id].instance);
             }
             return nullptr;
         }
 
+        template<HasConstruct T>
+        EntityRef create(T::Props props = {}) {
+            EntityRef ref = this->create();
+            if constexpr (HasConstruct<T>) {
+                T::construct(ref, props);
+            }
+            return ref;
+        }
+
         Entity entity();
+
+        Entity clone(Entity entity);
 
         EntityRef create();
 
         void kill(Entity entity);
 
         [[nodiscard]] bool isAlive(Entity entity);
-
-        const char *storeEntityName(const std::string &name);
 
         static std::string makeEntityName(Entity entity);
 

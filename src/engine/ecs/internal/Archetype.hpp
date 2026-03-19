@@ -77,11 +77,11 @@ namespace ecs::internal {
 
         Archetype(Archetype &&) noexcept = default;
 
-        Archetype &operator=(Archetype &&) noexcept = default;
-
         [[nodiscard]] const EntityType &getType() const;
 
         internal::EntityRow addEntity(Entity);
+
+        internal::EntityRow cloneEntity(internal::EntityRow row, Entity entity);
 
         std::optional<Entity> removeEntity(internal::EntityRow row);
 
@@ -100,10 +100,14 @@ namespace ecs::internal {
         [[nodiscard]] void *getColumn(ComponentID component) const;
 
         [[nodiscard]] bool has(ComponentID component) const;
+
         [[nodiscard]] bool stores(ComponentID component) const;
 
         [[nodiscard]] std::size_t count() const;
 
         [[nodiscard]] const Entity *getEntities() const;
+
+    private:
+        internal::EntityRow appendEntity(Entity entity);
     };
 } // namespace ecs::internal
