@@ -4,7 +4,6 @@
 #include <unordered_map>
 
 #include "../../entity/type.hpp"
-#include "engine/datastructures/SparseSet.hpp"
 #include "engine/reflection/TypeCounter.hpp"
 
 struct EventCounter;
@@ -16,7 +15,7 @@ namespace ecs {
 
     template<typename Data>
     struct EntityEvent {
-        void (*callback)(World &, Entity, const Data) = nullptr;
+        std::function<void (World&, Entity, Data)> callback;
     };
 }
 

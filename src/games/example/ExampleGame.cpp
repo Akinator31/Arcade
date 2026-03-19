@@ -8,6 +8,9 @@ SYSTEM(Player, ecs::EntityRef, On<PreUpdate>) {
 
     explicit Player(ecs::World &world) : EntityRef(world, Position{100.f, 100.f}, Size{100, 100},
                                                    Color{255, 0, 0, 255}, HoveredSensorComponent {}) {
+        listen<ClickedEvent>([this](auto &, auto, auto) {
+           set(Color {0, 255, 255, 255});
+        });
     }
 
     RUN() {

@@ -10,6 +10,8 @@ enum class MouseButtonLeftState {
 struct HoveredComponent : Required<Position, Size> {};
 struct HoveredSensorComponent : Required<Position, Size> {};
 
+struct ClickedEvent {};
+
 bool mouseInRect(const IVec2 &mousePos, const Position &position, const Size &size);
 
 SYSTEM(MouseButtonLeftSys, On<PreUpdate>) {
@@ -26,7 +28,7 @@ SYSTEM(MouseButtonLeftSys, On<PreUpdate>) {
     }
 };
 
-SYSTEM(HoveredSys, With<HoveredSensorComponent>, On<PreUpdate>) {
+SYSTEM(HoveredSys, With<HoveredSensorComponent>, On<PostUpdate>) {
     ITER(view) {
         const auto *positions = view.column<Position>();
         const auto *sizes = view.column<Size>();
@@ -49,6 +51,14 @@ SYSTEM(HoveredSys, With<HoveredSensorComponent>, On<PreUpdate>) {
   }
 };
 
+SYSTEM(EntityClickedSys, With<HoveredComponent>, On<PostUpdate>, InState<MouseButtonLeftState::RELEASED>) {
+  ITER(view) {
+      for (uint i = 0; i < view.count(); i++) {
+          view.world.emit(view.entity(i), ClickedEvent{});
+      }
+  }
+};
+
 struct UiPlugin {
     void load(ecs::World &world) {
         world.state(MouseButtonLeftState::NONE);
@@ -56,6 +66,7 @@ struct UiPlugin {
         world.registerComponent<HoveredSensorComponent>();
         world.system<MouseButtonLeftSys>();
         world.system<HoveredSys>();
+        world.system<EntityClickedSys>();
     }
 
     void unload(ecs::World &world) {
