@@ -51,3 +51,14 @@ concept HasOnSet = requires(ecs::World &world, ecs::Entity entity, const T *valu
 {
     { T::onSet(world, entity, value) };
 };
+
+namespace ecs {
+    class EntityRef;
+}
+
+template<typename T>
+concept HasConstruct = requires(ecs::EntityRef &ref, typename T::Props props)
+{
+    { T::construct(ref) };
+    { T::construct(ref, props) };
+};
