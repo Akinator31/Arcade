@@ -9,6 +9,8 @@ enum class MouseButtonLeftState {
 
 struct HoveredComponent : Required<Position, Size> {};
 struct HoveredSensorComponent : Required<Position, Size> {};
+struct PressedComponent : Required<Position, Size> {};
+struct TrackMouseOnPressedComponent : Required<HoveredComponent> {};
 
 struct ClickedEvent {};
 struct MouseEnterEvent {};
@@ -44,6 +46,7 @@ SYSTEM(HoveredSys, With<HoveredSensorComponent>, On<PostUpdate>) {
                         world.add<HoveredComponent>(entity);
                         world.emit(entity, MouseEnterEvent{});
                     });
+                    return;
                 }
             } else {
                 view.world.command([entity = view.entity(i)](ecs::World &world) {
@@ -55,10 +58,44 @@ SYSTEM(HoveredSys, With<HoveredSensorComponent>, On<PostUpdate>) {
   }
 };
 
+SYSTEM(PressedSys, With<Position, Size>, On<PostUpdate>) {
+    ITER(view) {
+        const auto isMousePressed = view.world.getState<MouseButtonLeftState>();
+        const auto mousePos = view.world.api->getMousePosition();
+        const auto *positions = view.column<Position>();
+        const auto *sizes = view.column<Size>();
+
+        for (uint i = 0; i < view.count(); i++) {
+            if (isMousePressed != MouseButtonLeftState::PRESSED) {
+                view.world.command([entity = view.entity(i)](ecs::World &world) {
+                   world.remove<PressedComponent>(entity);
+                });
+                return;
+            }
+            if (mouseInRect(mousePos, positions[i], sizes[i])) {
+                view.world.command([entity = view.entity(i)](ecs::World &world) {
+                   world.add<PressedComponent>(entity);
+                });
+            }
+        }
+    }
+};
+
 SYSTEM(EntityClickedSys, With<HoveredComponent>, On<PostUpdate>, InState<MouseButtonLeftState::RELEASED>) {
   ITER(view) {
       for (uint i = 0; i < view.count(); i++) {
           view.world.emit(view.entity(i), ClickedEvent{});
+      }
+  }
+};
+
+SYSTEM(TrackMouseOnPressedSys, With<TrackMouseOnPressedComponent, PressedComponent>, On<PostUpdate>) {
+  ITER(view) {
+      const auto [x, y] = view.world.api->getMousePosition();
+      const auto *sizes = view.column<Size>();
+
+      for (uint i = 0; i < view.count(); i++) {
+          view.world.set(view.entity(i), Position {static_cast<float>(x) - sizes[i].width / 2 , static_cast<float>(y) - sizes[i].height / 2});
       }
   }
 };
@@ -68,13 +105,20 @@ struct UiPlugin {
         world.state(MouseButtonLeftState::NONE);
         world.registerComponent<HoveredComponent>();
         world.registerComponent<HoveredSensorComponent>();
+        world.registerComponent<TrackMouseOnPressedComponent>();
+        world.registerComponent<PressedComponent>();
         world.system<MouseButtonLeftSys>();
         world.system<HoveredSys>();
         world.system<EntityClickedSys>();
+        world.system<TrackMouseOnPressedSys>();
+        world.system<PressedSys>();
     }
 
     void unload(ecs::World &world) {
         world.remove<MouseButtonLeftSys>();
         world.remove<HoveredSys>();
+        world.system<EntityClickedSys>();
+        world.remove<TrackMouseOnPressedSys>();
+        world.remove<PressedSys>();
     }
 };

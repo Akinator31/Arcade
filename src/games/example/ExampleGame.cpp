@@ -18,17 +18,17 @@ SYSTEM(Player, ecs::EntityRef, On<PreUpdate>) {
     }
 
     RUN() {
-        auto *position = get<Position>();
-
-        position->x += direction * 2.f;
-        if (position->x < 0.f) {
-            position->x = 0.f;
-            direction = 1.f;
-        }
-        if (position->x > 700.f) {
-            position->x = 700.f;
-            direction = -1.f;
-        }
+        // auto *position = get<Position>();
+        //
+        // position->x += direction * 2.f;
+        // if (position->x < 0.f) {
+        //     position->x = 0.f;
+        //     direction = 1.f;
+        // }
+        // if (position->x > 700.f) {
+        //     position->x = 700.f;
+        //     direction = -1.f;
+        // }
     }
 };
 
