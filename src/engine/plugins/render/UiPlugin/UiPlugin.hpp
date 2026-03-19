@@ -8,6 +8,9 @@ enum class MouseButtonLeftState {
 };
 
 struct HoveredComponent : Required<Position, Size> {};
+struct HoveredSensorComponent : Required<Position, Size> {};
+
+bool mouseInRect(const IVec2 &mousePos, const Position &position, const Size &size);
 
 SYSTEM(MouseButtonLeftSys, On<PreUpdate>) {
     static void run(ecs::World& world) {
@@ -23,14 +26,40 @@ SYSTEM(MouseButtonLeftSys, On<PreUpdate>) {
     }
 };
 
+SYSTEM(HoveredSys, With<HoveredSensorComponent>, On<PreUpdate>) {
+    ITER(view) {
+        const auto *positions = view.column<Position>();
+        const auto *sizes = view.column<Size>();
+        const bool hasHoveredComponent = view.optional<HoveredComponent>();
+        const auto mousePos = view.world.api->getMousePosition();
+
+        for (uint i = 0; i < view.count(); i++) {
+            if (mouseInRect(mousePos, positions[i], sizes[i])) {
+                if (!hasHoveredComponent) {
+                    view.world.command([entity = view.entity(i)](ecs::World &world) {
+                        world.add<HoveredComponent>(entity);
+                    });
+                }
+            } else {
+                view.world.command([entity = view.entity(i)](ecs::World &world) {
+                        world.remove<HoveredComponent>(entity);
+                    });
+            }
+        }
+  }
+};
+
 struct UiPlugin {
     void load(ecs::World &world) {
         world.state(MouseButtonLeftState::NONE);
         world.registerComponent<HoveredComponent>();
+        world.registerComponent<HoveredSensorComponent>();
         world.system<MouseButtonLeftSys>();
+        world.system<HoveredSys>();
     }
 
-    void unload([[maybe_unused]]ecs::World &world) {
+    void unload(ecs::World &world) {
         world.remove<MouseButtonLeftSys>();
+        world.remove<HoveredSys>();
     }
 };

@@ -7,7 +7,7 @@ SYSTEM(Player, ecs::EntityRef, On<PreUpdate>) {
     float direction = 2.f;
 
     explicit Player(ecs::World &world) : EntityRef(world, Position{100.f, 100.f}, Size{100, 100},
-                                                   Color{255, 0, 0, 255}) {
+                                                   Color{255, 0, 0, 255}, HoveredSensorComponent {}) {
     }
 
     RUN() {
