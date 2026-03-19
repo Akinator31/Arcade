@@ -11,6 +11,10 @@ SYSTEM(Player, ecs::EntityRef, On<PreUpdate>) {
         listen<ClickedEvent>([this](auto &, auto, auto) {
            set(Color {0, 255, 255, 255});
         });
+
+        listen<MouseEnterEvent>([](auto &, auto, auto) {
+            std::cout << "MOUSE ENTER" << std::endl;
+        });
     }
 
     RUN() {

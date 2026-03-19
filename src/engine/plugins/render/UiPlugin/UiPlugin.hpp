@@ -11,6 +11,8 @@ struct HoveredComponent : Required<Position, Size> {};
 struct HoveredSensorComponent : Required<Position, Size> {};
 
 struct ClickedEvent {};
+struct MouseEnterEvent {};
+struct MouseExitEvent {};
 
 bool mouseInRect(const IVec2 &mousePos, const Position &position, const Size &size);
 
@@ -40,11 +42,13 @@ SYSTEM(HoveredSys, With<HoveredSensorComponent>, On<PostUpdate>) {
                 if (!hasHoveredComponent) {
                     view.world.command([entity = view.entity(i)](ecs::World &world) {
                         world.add<HoveredComponent>(entity);
+                        world.emit(entity, MouseEnterEvent{});
                     });
                 }
             } else {
                 view.world.command([entity = view.entity(i)](ecs::World &world) {
                         world.remove<HoveredComponent>(entity);
+                        world.emit(entity, MouseExitEvent{});
                     });
             }
         }
