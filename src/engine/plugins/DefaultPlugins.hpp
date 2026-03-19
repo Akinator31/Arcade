@@ -3,20 +3,23 @@
 #include "engine/ecs/World.hpp"
 #include "render/PositionPropagationPlugin/PositionPropagationPlugin.hpp"
 #include "render/RenderPlugin/RenderPlugin.hpp"
+#include "sprite/SpritePlugin.hpp"
+#include "physics/PhysicsPlugin.hpp"
 #include "render/UiPlugin/UiPlugin.hpp"
 
 struct DefaultPlugin {
     void load(ecs::World &world) {
         world.plugin<PositionPropagationPlugin>();
         world.plugin<RenderPlugin>();
+        world.plugin<PhysicsPlugin>();
         world.plugin<CliPlugin>(CliMode::Server, 4040);
         world.plugin<UiPlugin>();
+        world.plugin<SpritePlugin>();
     }
 
     void unload(ecs::World &world) {
         world.removePlugin<PositionPropagationPlugin>();
         world.removePlugin<RenderPlugin>();
-        world.removePlugin<UiPlugin>();
         world.plugin<CliPlugin>();
     }
 };

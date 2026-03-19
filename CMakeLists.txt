@@ -94,6 +94,22 @@ if (BUILD_GAMES)
             OUTPUT_NAME arcade_game_example
             PREFIX ""
     )
+
+    # PACMAN
+    add_library(pacman_game SHARED
+            src/games/pacman/Pacman.cpp
+    )
+    target_sources(pacman_game PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
+    target_include_directories(pacman_game PRIVATE src/shared src src/games/pacman)
+    target_link_libraries(pacman_game PRIVATE arcade_shared)
+    target_compile_options(pacman_game PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    target_link_options(pacman_game PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+
+    set_target_properties(pacman_game PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+            OUTPUT_NAME arcade_game_pacman
+            PREFIX ""
+    )
 endif ()
 
 if (BUILD_TESTS)

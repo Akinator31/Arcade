@@ -8,9 +8,9 @@ namespace ecs {
     class World;
 
     class EntityRef : public Entity {
+    public:
         World &world;
 
-    public:
         explicit EntityRef(World &world, const Entity entity) : Entity(entity), world(world) {
         }
 
