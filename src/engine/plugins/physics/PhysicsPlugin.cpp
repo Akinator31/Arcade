@@ -4,12 +4,14 @@
 #include <unordered_set>
 
 namespace {
+    const Zone kDefaultPhysicsBounds = {{-100000.f, -100000.f}, {200000.f, 200000.f}};
+
     struct CollisionPair {
         ecs::Entity source{};
         ecs::Entity target{};
 
         bool operator==(const CollisionPair &other) const noexcept {
-            return this->source == other.source && this->target == other.target;
+            return source == other.source && target == other.target;
         }
     };
 
@@ -26,10 +28,6 @@ namespace {
         std::unordered_set<CollisionPair, CollisionPairHash> current;
     };
 
-    bool isRigidBody(const std::bitset<16> &flags) {
-        return (flags.to_ulong() & RIGID) != 0;
-    }
-
     bool touches(const Zone &a, const Zone &b) {
         return a.position.x <= b.position.x + b.size.width &&
                a.position.x + a.size.width >= b.position.x &&
@@ -37,104 +35,89 @@ namespace {
                a.position.y + a.size.height >= b.position.y;
     }
 
-    /** @brief Returns the broad phase area covering the whole movement. */
-    Zone sweepZone(const Zone &zone, const float dx, const float dy) {
-        Zone area = zone;
+    Zone sweepZone(Zone zone, float dx, float dy) {
+        if (dx > 0.f) zone.size.width += dx;
+        else if (dx < 0.f) zone.position.x += dx, zone.size.width -= dx;
 
-        if (dx > 0.f) {
-            area.size.width += dx;
-        } else if (dx < 0.f) {
-            area.position.x += dx;
-            area.size.width -= dx;
-        }
+        if (dy > 0.f) zone.size.height += dy;
+        else if (dy < 0.f) zone.position.y += dy, zone.size.height -= dy;
 
-        if (dy > 0.f) {
-            area.size.height += dy;
-        } else if (dy < 0.f) {
-            area.position.y += dy;
-            area.size.height -= dy;
-        }
-
-        return area;
+        return zone;
     }
 
-    /** @brief expands the query box so edge contacts are detected too. */
-    Zone contactZone(const Zone &zone) {
-        constexpr float margin = 0.001f;
-        return {
-            .position = {zone.position.x - margin, zone.position.y - margin},
-            .size = {zone.size.width + margin * 2.f, zone.size.height + margin * 2.f}
-        };
-    }
+    float clampAxis(const Zone &current, float delta, bool horizontal, ecs::Entity self, const auto &hits) {
+        if (delta == 0.f) return 0.f;
 
-    bool overlapsOnCrossAxis(const Zone &body, const Zone &other, const bool horizontal) {
-        if (horizontal) {
-            return body.position.y < other.position.y + other.size.height &&
-                   body.position.y + body.size.height > other.position.y;
-        }
-        return body.position.x < other.position.x + other.size.width &&
-               body.position.x + body.size.width > other.position.x;
-    }
-
-    /** @brief clamp movement on one axis if collid. */
-    float resolveAxis(const Zone &body, const float delta, const datastructures::EcsVec<EntityZone> &hits,
-                      const ecs::Entity self, const bool horizontal) {
         float allowed = delta;
 
         for (const auto &[entity, zone, flags]: hits) {
-            if (entity == self || !isRigidBody(flags) || !overlapsOnCrossAxis(body, zone, horizontal)) {
-                continue;
-            }
+            if (entity == self || !(flags.to_ulong() & RIGID)) continue;
 
-            if (horizontal && delta > 0.f) {
-                allowed = std::min(allowed, zone.position.x - (body.position.x + body.size.width));
-            } else if (horizontal && delta < 0.f) {
-                allowed = std::max(allowed, zone.position.x + zone.size.width - body.position.x);
-            } else if (!horizontal && delta > 0.f) {
-                allowed = std::min(allowed, zone.position.y - (body.position.y + body.size.height));
-            } else if (!horizontal && delta < 0.f) {
-                allowed = std::max(allowed, zone.position.y + zone.size.height - body.position.y);
+            const bool overlapsCrossAxis = horizontal
+                                               ? current.position.y < zone.position.y + zone.size.height &&
+                                                 current.position.y + current.size.height > zone.position.y
+                                               : current.position.x < zone.position.x + zone.size.width &&
+                                                 current.position.x + current.size.width > zone.position.x;
+
+            if (!overlapsCrossAxis) continue;
+
+            const float curMin = horizontal ? current.position.x : current.position.y;
+            const float curMax = horizontal
+                                     ? current.position.x + current.size.width
+                                     : current.position.y + current.size.height;
+            const float objMin = horizontal ? zone.position.x : zone.position.y;
+            const float objMax = horizontal ? zone.position.x + zone.size.width : zone.position.y + zone.size.height;
+
+            if (delta > 0.f) {
+                if (objMin < curMax) continue;
+                allowed = std::min(allowed, objMin - curMax);
+            } else {
+                if (objMax > curMin) continue;
+                allowed = std::max(allowed, objMax - curMin);
             }
         }
 
         return allowed;
     }
+}
 
-    /** @brief resolv a rigide body with a simple X then Y. */
-    void resolveBody(ArchetypeView &view, const uint index, CollisionState &state) {
-        auto *positions = view.column<Position>();
-        const auto *sizes = view.column<Size>();
-        auto *velocities = view.column<Velocity>();
-        const auto *emit_events = view.optional<EmitCollisionEvent>();
-        auto *query = view.world.singleton_get<SpatialQuery>();
+void PhysicsSys::iter(ArchetypeView &view) {
+    auto *state = view.world.singleton_get<CollisionState>();
+    auto *positions = view.column<Position>();
+    const auto *sizes = view.column<Size>();
+    auto *velocities = view.column<Velocity>();
+    const auto *bodies = view.column<RigidBody>();
+    const auto *emitEvents = view.optional<EmitCollisionEvent>();
+    auto *query = view.world.singleton_get<SpatialQuery>();
+    const bool emits = emitEvents != nullptr;
+    const float dt = view.world.deltaTime;
 
-        Position &position = positions[index];
-        Velocity &velocity = velocities[index];
-        const Zone body = {position, sizes[index]};
-        const float dx = velocity.x * view.world.deltaTime;
-        const float dy = velocity.y * view.world.deltaTime;
+    for (uint i = 0; i < view.count(); ++i) {
+        const ecs::Entity self = view.entity(i);
+        const Zone body{positions[i], sizes[i]};
+        const float dx = velocities[i].x * dt;
+        const float dy = velocities[i].y * dt;
         const auto &hits = query->query(sweepZone(body, dx, dy));
-        const float allowed_x = resolveAxis(body, dx, hits, view.entity(index), true);
-        const Zone moved_x = {{position.x + allowed_x, position.y}, body.size};
-        const float allowed_y = resolveAxis(moved_x, dy, hits, view.entity(index), false);
-        const Zone next = {{moved_x.position.x, position.y + allowed_y}, body.size};
 
-        position = {next.position.x, next.position.y};
+        float allowedX = dx;
+        float allowedY = dy;
 
-        if (allowed_x != dx) {
-            velocity.x = 0.f;
-        }
-        if (allowed_y != dy) {
-            velocity.y = 0.f;
+        if (bodies[i] == RIGID) {
+            allowedX = clampAxis(body, dx, true, self, hits);
+            allowedY = clampAxis({{body.position.x + allowedX, body.position.y}, body.size}, dy, false, self, hits);
+
+            if (allowedX != dx) velocities[i].x = 0.f;
+            if (allowedY != dy) velocities[i].y = 0.f;
         }
 
-        if (emit_events == nullptr) {
-            return;
-        }
+        positions[i] = {body.position.x + allowedX, body.position.y + allowedY};
 
-        for (const auto &[entity, zone, flags]: query->query(contactZone(next))) {
-            if (entity != view.entity(index) && isRigidBody(flags) && touches(next, zone)) {
-                state.current.insert({view.entity(index), entity});
+        if (!emits) continue;
+
+        const Zone next{positions[i], sizes[i]};
+        for (const auto &[entity, zone, flags]: hits) {
+            if (entity != self && flags.any() && touches(next, zone)) {
+                state->current.insert({self, entity});
             }
         }
     }
@@ -143,37 +126,24 @@ namespace {
 void IntegrateVelocitySys::iter(ArchetypeView &view) {
     auto *positions = view.column<Position>();
     const auto *velocities = view.column<Velocity>();
+    const float dt = view.world.deltaTime;
 
-    for (uint i = 0; i < view.count(); i++) {
-        positions[i].x += velocities[i].x * view.world.deltaTime;
-        positions[i].y += velocities[i].y * view.world.deltaTime;
-    }
-}
-
-void PhysicsSys::iter(ArchetypeView &view) {
-    auto *state = view.world.singleton_get<CollisionState>();
-    if (state == nullptr) {
-        return;
-    }
-
-    for (uint i = 0; i < view.count(); i++) {
-        resolveBody(view, i, *state);
+    for (uint i = 0; i < view.count(); ++i) {
+        positions[i].x += velocities[i].x * dt;
+        positions[i].y += velocities[i].y * dt;
     }
 }
 
 void PhysicsSys::run(ecs::World &world) const {
     auto *state = world.singleton_get<CollisionState>();
-    if (state == nullptr) {
-        return;
-    }
 
-    for (const CollisionPair &pair: state->current) {
+    for (const auto &pair: state->current) {
         if (!state->previous.contains(pair)) {
             world.emit(pair.source, CollisionStart{pair.target});
         }
     }
 
-    for (const CollisionPair &pair: state->previous) {
+    for (const auto &pair: state->previous) {
         if (!state->current.contains(pair)) {
             world.emit(pair.source, CollisionEnd{pair.target});
         }
@@ -186,13 +156,15 @@ void PhysicsSys::run(ecs::World &world) const {
 void GravitySys::iter(ArchetypeView &view) {
     const auto *gravity = view.column<Gravity>();
     auto *velocities = view.column<Velocity>();
-    for (uint i = 0; i < view.count(); i++) {
-        velocities[i].y += view.world.deltaTime * gravity->scale;
+    const float dt = view.world.deltaTime;
+
+    for (uint i = 0; i < view.count(); ++i) {
+        velocities[i].y += dt * gravity[i].scale;
     }
 }
 
 void PhysicsPlugin::load(ecs::World &world) {
-    world.plugin<SpatialQueryPlugin>(Zone{{-500, -500}, {3000, 3000}});
+    world.plugin<SpatialQueryPlugin>(kDefaultPhysicsBounds);
     world.registerComponent<Size>();
     world.registerComponent<GlobalPosition>();
     world.registerComponent<Position>();

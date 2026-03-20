@@ -1,7 +1,10 @@
-PROJECT_NAME           = "NanoTekSpice"
-INPUT                  = src/ include/ README.md
+PROJECT_NAME           = "Arcade"
+INPUT                  = src/ include/ README.md docs/
+EXCLUDE                = docs/doxygen-awesome
 RECURSIVE              = YES
 USE_MDFILE_AS_MAINPAGE = README.md
+FILE_PATTERNS          = *.cpp *.hpp *.h *.md
+EXTENSION_MAPPING      = md=Markdown
 
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html

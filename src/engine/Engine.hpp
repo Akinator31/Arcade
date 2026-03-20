@@ -74,10 +74,6 @@ public:
         return this->name;
     };
 
-    const std::vector<Resource> &getResources() override {
-        return this->_resources;
-    };
-
     void update(IDisplayModule *api) override {
         const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
 
@@ -89,4 +85,8 @@ public:
         this->hasRenderedFrame = true;
         this->progress();
     };
+
+    const std::vector<Resource> &getResources() override {
+        return this->_resources;
+    }
 };

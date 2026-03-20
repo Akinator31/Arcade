@@ -22,7 +22,7 @@ struct Gravity {
     float scale = 1;
 };
 
-SYSTEM(IntegrateVelocitySys, With<Velocity, Position>, Without<RigidBody>, On<PreRender>) {
+SYSTEM(IntegrateVelocitySys, With<Velocity, Position>, Without<RigidBody>, On<PostUpdate>) {
     ITER(view);
 };
 

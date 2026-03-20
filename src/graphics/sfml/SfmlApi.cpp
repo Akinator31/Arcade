@@ -3,7 +3,6 @@
 #include <SFML/Graphics.hpp>
 #include <bit>
 #include <cmath>
-#include <stdexcept>
 
 void SfmlGraphicsApi::init() {
     this->window.create(sf::VideoMode::getDesktopMode(), "game", sf::Style::Default);
@@ -157,39 +156,31 @@ void SfmlGraphicsApi::drawRectOutline(GlobalPosition pos, Size size, const Color
     this->window.draw(this->rectShape);
 }
 
-ResourceIndex SfmlGraphicsApi::loadFont(const std::string &path, const unsigned int size) {
-    this->fonts.emplace_back();
-    this->fonts.back().size = static_cast<int>(size);
-    if (!this->fonts.back().font.openFromFile(path)) {
-        this->fonts.pop_back();
-        throw std::runtime_error("Failed to load font: " + path);
+void SfmlGraphicsApi::loadResources(const std::vector<Resource> &resources) {
+    this->_resources.clear();
+
+    for (const auto &[path, type]: resources) {
+        if (type == ResourceType::Texture) {
+            this->_resources.emplace_back(sf::Texture(path));
+        }
+        if (type == ResourceType::Font) {
+            this->_resources.emplace_back(sf::Font(path));
+        }
     }
-    return static_cast<ResourceIndex>(this->fonts.size() - 1);
 }
 
 void SfmlGraphicsApi::drawText(GlobalPosition pos, const ResourceIndex handle, const char *str, const Color color) {
-    this->textShape.setFont(this->fonts[handle].font);
+    this->textShape.setFont(std::get<sf::Font>(this->_resources[handle]));
     this->textShape.setString(str);
-    this->textShape.setCharacterSize(static_cast<unsigned int>(this->fonts[handle].size));
+    this->textShape.setCharacterSize(16);
     this->textShape.setFillColor(std::bit_cast<sf::Color>(color));
     this->textShape.setPosition({pos.x, pos.y});
     this->window.draw(this->textShape);
 }
 
 
-ResourceIndex SfmlGraphicsApi::loadTexture(const std::string &path) {
-    sf::Texture img;
-    if (!img.loadFromFile(path)) {
-        throw std::runtime_error("unable to load image " + path);
-    }
-
-    this->images.push_back(std::move(img));
-
-    return static_cast<ResourceIndex>(this->images.size() - 1);
-}
-
 void SfmlGraphicsApi::drawSprite(const GlobalPosition pos, const Sprite &spr) {
-    this->sprite.setTexture(this->images[spr.texture]);
+    this->sprite.setTexture(std::get<sf::Texture>(this->_resources[spr.texture]));
     this->sprite.setTextureRect(std::bit_cast<sf::IntRect>(spr.rect));
 
     const float originX = static_cast<float>(spr.rect.width) / 2.f;
@@ -205,11 +196,11 @@ void SfmlGraphicsApi::drawSprite(const GlobalPosition pos, const Sprite &spr) {
 }
 
 extern "C" {
-GraphicsApi *create() {
+IDisplayModule *create() {
     return new SfmlGraphicsApi();
 }
 
-void destroy(const GraphicsApi *api) {
+void destroy(const IDisplayModule *api) {
     delete api;
 }
 }

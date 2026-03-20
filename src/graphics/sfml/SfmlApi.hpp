@@ -1,22 +1,18 @@
 #pragma once
 
-#include "arcade/GraphicsApi.hpp"
+#include "arcade/IDisplayModule.hpp"
 
 #include <SFML/Graphics.hpp>
 
-struct FontRecord {
-    int size{};
-    sf::Font font;
-};
+using ResourceRecord = std::variant<sf::Font, sf::Texture>;
 
-class SfmlGraphicsApi : public GraphicsApi {
+class SfmlGraphicsApi : public IDisplayModule {
     sf::RenderWindow window;
     sf::RectangleShape rectShape;
     sf::Sprite sprite;
     sf::Texture defaultTexture;
     sf::Font defaultFont;
-    std::vector<sf::Texture> images;
-    std::vector<FontRecord> fonts;
+    std::vector<ResourceRecord> _resources;
     mutable sf::Text textShape;
     sf::Clock clock;
     float deltaTime = 0.f;
@@ -42,9 +38,7 @@ public:
 
     bool isKeyPressed(KeyboardCode code) override;
 
-    ResourceIndex loadTexture(const std::string &path) override;
-
-    ResourceIndex loadFont(const std::string &path, unsigned int size) override;
+    void loadResources(const std::vector<Resource> &resources) override;
 
     IVec2 getMousePosition() const override;
 
