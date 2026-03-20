@@ -200,6 +200,10 @@ Test(ecs, create_constructible_entity_uses_props_and_default_props) {
             float y = 2.f;
         };
 
+        static Props Default() {
+            return Props { .x = 0, .y = 0};
+        }
+
         static void construct(ecs::EntityRef ref, const Props props = {.x = 1, .y = 2}) {
             ref.set(Position{props.x, props.y});
         }

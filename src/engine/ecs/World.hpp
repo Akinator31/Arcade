@@ -86,12 +86,17 @@ namespace ecs {
         }
 
         template<HasConstruct T>
-        EntityRef create(T::Props props = {}) {
+        EntityRef create(T::Props props) {
             EntityRef ref = this->create();
             if constexpr (HasConstruct<T>) {
                 T::construct(ref, props);
             }
             return ref;
+        }
+
+        template<HasConstruct T>
+        EntityRef create() {
+            return create<T>(T::Default());
         }
 
         Entity entity();

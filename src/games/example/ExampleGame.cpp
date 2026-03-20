@@ -20,11 +20,11 @@ SYSTEM(PlayerSys, ecs::EntityRef, On<Update>) {
 
         //world.set(camera_plugin_impl::mainCamera(world), CameraFollow{this->entity(), {0.f, 0.f}, true});
 
-        world.create<Button>();
+        world.create<Button>({1, 2, 300, 151, 600, 600});
     }
 
     RUN() {
-        if (this->world.api->isKeyPressed(KeyboardCode::Space) && this->world.has<IsOnGround>(this->entity())) {
+        if (this->world.api->isKeyPressed(Space) && this->world.has<IsOnGround>(this->entity())) {
             get<Velocity>()->y = -500;
         }
     }
@@ -41,7 +41,9 @@ extern "C" IGameModule *load() {
         world.create().add<Enemy>().set(Position{300, 1500}, Size{100, 100}, Color::blue(), RigidBody::RIGID);
         world.create().set(Position{-300, 1800}, Size{10000, 100}, Color::red(), RigidBody::RIGID);
     }, {
-        Resource::texture("./assets/pacman.png")
+        Resource::texture("./assets/pacman.png"),
+        Resource::texture("./assets/Start.png"),
+        Resource::texture("./assets/StartHover.png")
     }));
 }
 
