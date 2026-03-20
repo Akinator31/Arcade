@@ -319,8 +319,27 @@ namespace ecs {
         void emit(const Entity entity, Event evt) {
             if (const uint64_t id = this->id<Event>(entity); this->entity_event_map.contains(id)) {
                 auto *sys = static_cast<EntityEvent<Event> *>(this->entity_event_map.at(id).instance);
-                sys->callback(*this, entity, evt);
+                const auto listeners = sys->listeners;
+                for (const auto &listener: listeners) {
+                    listener.callback(*this, entity, evt);
+                }
             }
+        }
+
+        template<typename Event, typename Func>
+            requires std::invocable<Func, World &, Entity, const Event>
+        EventListenerId listen(const Entity entity, Func &&func) {
+            return internal::EventRegistry::listen<Event>(entity, std::forward<Func>(func));
+        }
+
+        template<typename Event>
+        void unlisten(const Entity entity) {
+            internal::EventRegistry::unlisten<Event>(entity);
+        }
+
+        template<typename Event>
+        void unlisten(const Entity entity, const EventListenerId listener_id) {
+            internal::EventRegistry::unlisten<Event>(entity, listener_id);
         }
 
         template<typename Phase>
@@ -568,6 +587,10 @@ namespace ecs {
 
     inline EntityRef EntityRef::child() const {
         return this->world.create().relate<Hierarchy>(this->entity());
+    }
+
+    inline void EntityRef::childOf(const Entity entity) const {
+        this->world.relate<Hierarchy>(entity, this->entity());
     }
 
     template<typename Event, typename Func>

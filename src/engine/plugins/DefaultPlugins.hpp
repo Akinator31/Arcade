@@ -1,5 +1,6 @@
 #pragma once
 #include "cli/CliPlugin.hpp"
+#include "control/ControlPlugin.hpp"
 #include "engine/ecs/World.hpp"
 #include "render/PositionPropagationPlugin/PositionPropagationPlugin.hpp"
 #include "render/RenderPlugin/RenderPlugin.hpp"
@@ -12,6 +13,7 @@ struct DefaultPlugin {
         world.plugin<PositionPropagationPlugin>();
         world.plugin<RenderPlugin>();
         world.plugin<PhysicsPlugin>();
+        world.plugin<ControlPlugin>();
         world.plugin<CliPlugin>(CliMode::Server, 4040);
         world.plugin<UiPlugin>();
         world.plugin<SpritePlugin>();
