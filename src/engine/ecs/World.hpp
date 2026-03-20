@@ -185,7 +185,7 @@ namespace ecs {
         template<typename T>
         void set(const Entity entity, const T &value) {
             const ComponentID cid = reflection::type_id<T>();
-            this->add_id(entity, cid);
+            const bool added = this->add_id(entity, cid, false);
             T *current = this->get<T>(entity);
             if constexpr (std::is_same_v<T, Name>) {
                 this->clearEntityName(entity);
@@ -195,12 +195,15 @@ namespace ecs {
             if constexpr (HasOnSet<T>) {
                 T::onSet(*this, entity, current);
             }
+            if (added) {
+                this->runArchetypeOnAdd(entity);
+            }
         }
 
         template<typename T>
         void set(const Entity entity, const T &&value) {
             const ComponentID cid = reflection::type_id<T>();
-            this->add_id(entity, cid);
+            const bool added = this->add_id(entity, cid, false);
             T *current = this->get<T>(entity);
             if constexpr (std::is_same_v<T, Name>) {
                 this->clearEntityName(entity);
@@ -209,6 +212,9 @@ namespace ecs {
             *current = std::move(value);
             if constexpr (HasOnSet<T>) {
                 T::onSet(*this, entity, current);
+            }
+            if (added) {
+                this->runArchetypeOnAdd(entity);
             }
         }
 
@@ -497,11 +503,11 @@ namespace ecs {
 
         void *get_id(Entity entity, ComponentID cid);
 
-        bool add_id(Entity entity, ComponentID cid);
+        bool add_id(Entity entity, ComponentID cid, bool notify = true);
 
         void remove_id(Entity entity, ComponentID cid);
 
-        bool add_id_batched(Entity entity, const ComponentID *cid, uint count);
+        bool add_id_batched(Entity entity, const ComponentID *cid, uint count, bool notify = true);
 
         template<typename... Components>
         void add(const Entity entity) {
@@ -518,6 +524,8 @@ namespace ecs {
         void constructComponent(Entity entity, ComponentID cid);
 
         void runOnAdd(Entity entity, ComponentID cid);
+
+        void runArchetypeOnAdd(Entity entity);
 
         void runOnRemove(Entity entity, ComponentID cid, const void *value);
 
