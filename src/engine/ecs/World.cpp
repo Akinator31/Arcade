@@ -367,6 +367,7 @@ namespace ecs {
             }
             this->removeEntityOfArchetype(updated_arch, updated_record.row);
         }
+        this->unlistenAll(entity);
         return this->entity_registry.destroy(entity);
     }
 

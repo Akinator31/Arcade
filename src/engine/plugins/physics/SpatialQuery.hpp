@@ -204,7 +204,7 @@ struct SpatialQuery {
     [[nodiscard]] const datastructures::EcsVec<ecs::Entity> &queryEntitiesAtPoint(const Position &position);
 };
 
-SYSTEM(SpatialQueryRebuildSystem, On<PreUpdate>) {
+SYSTEM(SpatialQueryRebuildSystem, On<PostUpdate>) {
     ecs::QueryID query_id;
 
     explicit SpatialQueryRebuildSystem(ecs::World &world);

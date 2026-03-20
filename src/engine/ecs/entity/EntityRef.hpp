@@ -26,6 +26,8 @@ namespace ecs {
 
         [[nodiscard]] EntityRef child() const;
 
+        void childOf(Entity entity) const;
+
         template<typename Relation>
         EntityRef &&relate(Entity target);
 
