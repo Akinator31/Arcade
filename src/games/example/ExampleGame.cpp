@@ -1,6 +1,7 @@
 #include "engine/Engine.hpp"
 #include "engine/plugins/DefaultPlugins.hpp"
 #include "arcade/IGameModule.hpp"
+#include "plugins/render/UiPlugin/UiPrefabs.hpp"
 
 struct DefaultScene;
 struct Enemy;
@@ -17,7 +18,9 @@ SYSTEM(PlayerSys, ecs::EntityRef, On<Update>) {
             }
         });
 
-        world.set(camera_plugin_impl::mainCamera(world), CameraFollow{this->entity(), {0.f, 0.f}, true});
+        //world.set(camera_plugin_impl::mainCamera(world), CameraFollow{this->entity(), {0.f, 0.f}, true});
+
+        world.create<Button>();
     }
 
     RUN() {
