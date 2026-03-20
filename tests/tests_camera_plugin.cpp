@@ -105,7 +105,7 @@ Test(render_plugin, uses_main_camera_for_entities_without_target) {
     const ecs::Entity entity = world.create().set(
         Position{130.f, 55.f},
         Size{10.f, 20.f},
-        Color::WHITE()
+        Color::white()
     ).entity();
 
     world.progress();
@@ -127,7 +127,7 @@ Test(render_plugin, uses_camera_target_when_present) {
     world.create().set(
         Position{32.f, 18.f},
         Size{8.f, 8.f},
-        Color::BLUE(),
+        Color::blue(),
         CameraTarget{ui_camera}
     );
 

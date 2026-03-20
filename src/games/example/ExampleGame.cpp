@@ -5,6 +5,7 @@
 struct DefaultScene;
 struct Enemy;
 
+extern "C" LibType LIB_TYPE = GAME;
 
 SYSTEM(PlayerSys, ecs::EntityRef, On<Update>) {
     explicit PlayerSys(ecs::World &world) : EntityRef(

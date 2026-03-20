@@ -10,7 +10,7 @@ struct EngineTickSystem {
 
 Test(engine, scene) {
     Engine engine("test", [](Engine &) {
-    });
+    }, {});
 
     struct MainScene;
     auto &scene = engine.scene<MainScene>();
@@ -26,7 +26,7 @@ Test(engine, scene) {
 
 Test(engine, progress_scene_type) {
     Engine engine("test", [](Engine &) {
-    });
+    }, {});
 
     struct MainScene;
     struct OtherScene;
@@ -49,7 +49,7 @@ Test(engine, progress_scene_type) {
 
 Test(engine, progress_current_scene) {
     Engine engine("test", [](Engine &) {
-    });
+    }, {});
 
     struct MainScene;
     struct OtherScene;
