@@ -69,10 +69,9 @@ struct Button {
             props.pos,
             Size{static_cast<float>(props.image.rect.width), static_cast<float>(props.image.rect.height)},
             sprite,
-            HoveredSensorComponent{},
             ImageOnHoverComponent{
-                .image = sprite,
-                .imageOnHover = spriteOnHover
+                sprite,
+                spriteOnHover,
             }
         );
     }

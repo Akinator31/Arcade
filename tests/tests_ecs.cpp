@@ -5,8 +5,7 @@
 
 #include "../src/engine/ecs/system/Query.hpp"
 
-struct Player {
-};
+struct Player {};
 
 
 Test(ecs, entity_creation) {
@@ -37,7 +36,7 @@ Test(ecs, component) {
     world.registerComponent<Position>();
     world.add<Position>(entity);
     world.get<Position>(entity)->x = 10;
-    const auto *pos = world.get<Position>(entity);
+    const auto* pos = world.get<Position>(entity);
 
     cr_assert_eq(pos->x, 10);
 }
@@ -51,11 +50,11 @@ Test(ecs, query) {
     world.add<Position>(entity);
 
     world.fetch<Position>()
-            .iter([entity](ArchetypeView &view) {
-                cr_assert_eq(view.entities()->index, entity.index);
+         .iter([entity](ArchetypeView& view) {
+             cr_assert_eq(view.entities()->index, entity.index);
 
-                view.column<Position>()->x += 10;
-            });
+             view.column<Position>()->x += 10;
+         });
 
     cr_assert_eq(world.get<Position>(entity)->x, 10);
 
@@ -63,7 +62,7 @@ Test(ecs, query) {
     q.required<Position>();
     const ecs::QueryID qid = world.cache(std::move(q));
 
-    world.read(qid).iter([entity](ArchetypeView &view) {
+    world.read(qid).iter([entity](ArchetypeView& view) {
         cr_assert_eq(view.entities()->index, entity.index);
         view.column<Position>()->x += 10;
     });
@@ -92,8 +91,8 @@ Test(archetype, clone_entity_copies_stored_components) {
 
     constexpr ecs::Entity source = {1, 0};
     const ecs::internal::EntityRow source_row = archetype.addEntity(source);
-    static_cast<Health *>(archetype.getComponent(source_row, reflection::type_id<Health>()))->value = 42;
-    static_cast<Damage *>(archetype.getComponent(source_row, reflection::type_id<Damage>()))->value = 7;
+    static_cast<Health*>(archetype.getComponent(source_row, reflection::type_id<Health>()))->value = 42;
+    static_cast<Damage*>(archetype.getComponent(source_row, reflection::type_id<Damage>()))->value = 7;
 
     constexpr ecs::Entity clone = {2, 0};
     const ecs::internal::EntityRow clone_row = archetype.cloneEntity(source_row, clone);
@@ -196,12 +195,12 @@ Test(ecs, clone_entity_clones_nested_hierarchy_recursively) {
 Test(ecs, create_constructible_entity_uses_props_and_default_props) {
     struct ConstructedEntity {
         struct Props {
-            float x = 1.f;
-            float y = 2.f;
+            float x = 0.f;
+            float y = 0.f;
         };
 
         static Props Default() {
-            return Props { .x = 0, .y = 0};
+            return Props{.x = 1, .y = 2};
         }
 
         static void construct(ecs::EntityRef ref, const Props props = {.x = 1, .y = 2}) {

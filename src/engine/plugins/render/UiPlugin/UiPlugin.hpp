@@ -18,6 +18,9 @@ struct TrackMouseOnPressedComponent : Required<HoveredComponent> {};
 struct ImageOnHoverComponent : Required<HoveredSensorComponent> {
     Sprite image;
     Sprite imageOnHover;
+
+    ImageOnHoverComponent(const Sprite& image, const Sprite& imageOnHover) :
+        Required<HoveredSensorComponent>{}, image(image), imageOnHover(imageOnHover) {}
 };
 
 struct ClickedEvent {};
