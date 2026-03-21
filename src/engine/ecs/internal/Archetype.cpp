@@ -48,12 +48,7 @@ namespace ecs::internal {
     }
 
     EntityRow Archetype::addEntity(const Entity entity) {
-        const EntityRow row = this->appendEntity(entity);
-
-        for (const auto &sys: this->onAdd) {
-            sys(*this, row);
-        }
-        return row;
+        return this->appendEntity(entity);
     }
 
     EntityRow Archetype::cloneEntity(const EntityRow row, const Entity entity) {

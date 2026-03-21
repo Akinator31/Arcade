@@ -59,6 +59,6 @@ namespace ecs {
 template<typename T>
 concept HasConstruct = requires(ecs::EntityRef &ref, typename T::Props props)
 {
-    { T::construct(ref) };
     { T::construct(ref, props) };
+    { T::Default() };
 };

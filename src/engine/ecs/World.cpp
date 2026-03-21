@@ -86,7 +86,7 @@ namespace ecs {
         record.row = newRow;
     }
 
-    bool World::add_id(const Entity entity, const ComponentID cid) {
+    bool World::add_id(const Entity entity, const ComponentID cid, const bool notify) {
 #ifndef NDEBUG
         if (!this->component_registry.isRegistered(cid)) {
             throw std::logic_error("component not registered");
@@ -115,10 +115,13 @@ namespace ecs {
         this->constructComponent(entity, cid);
         this->runOnAdd(entity, cid);
         this->addRequiredComponents(entity, cid);
+        if (notify) {
+            this->runArchetypeOnAdd(entity);
+        }
         return true;
     }
 
-    bool World::add_id_batched(const Entity entity, const ComponentID *cid, const uint32_t count) {
+    bool World::add_id_batched(const Entity entity, const ComponentID *cid, const uint32_t count, const bool notify) {
         const auto &record = this->entity_registry.getRecord(entity);
         const auto &arch = this->archetype_registry.getArchetype(record.archetypeId);
 
@@ -151,6 +154,9 @@ namespace ecs {
         for (const ComponentID added_cid: added) {
             this->addRequiredComponents(entity, added_cid);
         }
+        if (notify) {
+            this->runArchetypeOnAdd(entity);
+        }
         return true;
     }
 
@@ -166,6 +172,15 @@ namespace ecs {
         }
     }
 
+    void World::runArchetypeOnAdd(const Entity entity) {
+        const auto &record = this->entity_registry.getRecord(entity);
+        auto &arch = this->archetype_registry.getArchetype(record.archetypeId);
+
+        for (const auto &sys: arch.onAdd) {
+            sys(arch, record.row);
+        }
+    }
+
     void World::runOnRemove(const Entity entity, const ComponentID cid, const void *value) {
         if (const auto &record = this->component_registry.getRecord(cid); record.onRemove != nullptr &&
                                                                           value != nullptr) {
@@ -176,7 +191,7 @@ namespace ecs {
     void World::addRequiredComponents(const Entity entity, const ComponentID cid) {
         for (const auto &record = this->component_registry.getRecord(cid); const ComponentID required_cid: record.
              required) {
-            this->add_id(entity, required_cid);
+            this->add_id(entity, required_cid, false);
         }
     }
 

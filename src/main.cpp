@@ -16,6 +16,7 @@ int main(const int argc, char **argv) {
     IGameModule *game = game_loader.call<LoadGame>();
 
     api->init();
+    api->loadResources(game->getResources());
     while (api->isWindowOpen()) {
         api->beginFrame();
         game->update(api);
