@@ -8,16 +8,22 @@ enum class MouseButtonLeftState {
 };
 
 struct HoveredComponent : Required<Position, Size> {};
+
 struct HoveredSensorComponent : Required<Position, Size> {};
+
 struct PressedComponent : Required<Position, Size> {};
+
 struct TrackMouseOnPressedComponent : Required<HoveredComponent> {};
-struct HoveredButtonComponent : Required<HoveredSensorComponent> {
-    ResourceIndex image;
-    ResourceIndex hoverImage;
+
+struct ImageOnHoverComponent : Required<HoveredSensorComponent> {
+    Sprite image;
+    Sprite imageOnHover;
 };
 
 struct ClickedEvent {};
+
 struct MouseEnterEvent {};
+
 struct MouseExitEvent {};
 
 bool mouseInRect(const IVec2& mousePos, const Position& position, const Size& size);
@@ -62,35 +68,23 @@ SYSTEM(HoveredSys, With<HoveredSensorComponent>, On<PostUpdate>) {
     }
 };
 
-SYSTEM(HoveredButtonSys, On<Add>, With<HoveredComponent, HoveredButtonComponent, Sprite>) {
+SYSTEM(ImageOnHoverSys, On<Add>, With<HoveredComponent, ImageOnHoverComponent, Sprite>) {
     OBSERVE(table, row) {
-        ecs::Entity entity = table.getEntities()[row];
-
-        std::cout << "Satut1" << std::endl;
-
         auto* sprite = static_cast<Sprite*>(table.getComponent(row, reflection::type_id<Sprite>()));
-        auto* hover = static_cast<HoveredButtonComponent*>(table.getComponent(
-            row, reflection::type_id<HoveredButtonComponent>()));
+        const auto* hover = static_cast<ImageOnHoverComponent*>(table.getComponent(
+            row, reflection::type_id<ImageOnHoverComponent>()));
 
-        std::cout << "IN TEXTURE : " << sprite->texture << " HOVER : " << hover->hoverImage << std::endl;
-
-        table.world.set(entity, Sprite{hover->hoverImage, sprite->scale, sprite->rect});
+        *sprite = hover->imageOnHover;
     }
 };
 
-SYSTEM(UnHoveredButtonSys, On<Remove>, With<HoveredComponent, HoveredButtonComponent, Sprite>) {
+SYSTEM(UnHoveredButtonSys, On<Remove>, With<HoveredComponent, ImageOnHoverComponent, Sprite>) {
     OBSERVE(table, row) {
-        ecs::Entity entity = table.getEntities()[row];
-
-        std::cout << "Satut" << std::endl;
-
         auto* sprite = static_cast<Sprite*>(table.getComponent(row, reflection::type_id<Sprite>()));
-        auto* hover = static_cast<HoveredButtonComponent*>(table.getComponent(
-            row, reflection::type_id<HoveredButtonComponent>()));
+        const auto* hover = static_cast<ImageOnHoverComponent*>(table.getComponent(
+            row, reflection::type_id<ImageOnHoverComponent>()));
 
-        std::cout << "OUT TEXTURE : " << sprite->texture << " HOVER : " << hover->hoverImage << std::endl;
-
-        table.world.set(entity, Sprite{hover->image, sprite->scale, sprite->rect});
+        *sprite = hover->image;
     }
 };
 
@@ -144,12 +138,12 @@ struct UiPlugin {
         world.state(MouseButtonLeftState::NONE);
         world.registerComponent<HoveredComponent>();
         world.registerComponent<HoveredSensorComponent>();
-        world.registerComponent<HoveredButtonComponent>();
+        world.registerComponent<ImageOnHoverComponent>();
         world.registerComponent<TrackMouseOnPressedComponent>();
         world.registerComponent<PressedComponent>();
         world.system<MouseButtonLeftSys>();
         world.system<HoveredSys>();
-        world.system<HoveredButtonSys>();
+        world.system<ImageOnHoverSys>();
         world.system<UnHoveredButtonSys>();
         world.system<EntityClickedSys>();
         world.system<TrackMouseOnPressedSys>();
@@ -162,6 +156,6 @@ struct UiPlugin {
         world.system<EntityClickedSys>();
         world.remove<TrackMouseOnPressedSys>();
         world.remove<PressedSys>();
-        world.remove<HoveredButtonSys>();
+        world.remove<ImageOnHoverSys>();
     }
 };
