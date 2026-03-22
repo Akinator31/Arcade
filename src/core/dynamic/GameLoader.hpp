@@ -1,7 +1,7 @@
 #pragma once
 
 #include "DynamicLoader.hpp"
-#include "arcade/IGameModule.hpp"
+#include "IGameModule.hpp"
 
 using LoadGame = Member<IGameModule *(*)(), "load">;
 using UnloadGame = Member<void (*)(IGameModule *), "unload">;

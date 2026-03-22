@@ -25,7 +25,7 @@ void SfmlGraphicsApi::beginFrame() {
         if (event->is<sf::Event::Closed>()) {
             window.close();
         }
-        if (const auto *keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+        if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
             if (keyPressed->scancode == sf::Keyboard::Scancode::Escape)
                 window.close();
         }
@@ -33,14 +33,14 @@ void SfmlGraphicsApi::beginFrame() {
         if (event->is<sf::Event::MouseButtonReleased>()) {
             this->mouseReleasedThisFrame = true;
         }
-        if (const auto *value = event->getIf<sf::Event::Resized>()) {
+        if (const auto* value = event->getIf<sf::Event::Resized>()) {
             sf::View v(sf::FloatRect{{0, 0}, {static_cast<float>(value->size.x), static_cast<float>(value->size.y)}});
             window.setView(v);
         }
     }
 
 
-    this->window.clear();
+    this->window.clear({this->clearColor.r, this->clearColor.g, this->clearColor.b, this->clearColor.a});
     this->deltaTime = this->clock.restart().asSeconds();
 }
 
@@ -66,52 +66,52 @@ bool SfmlGraphicsApi::isKeyPressed(const KeyboardCode code) {
         break
 
     switch (code) {
-        key(A);
-        key(B);
-        key(C);
-        key(D);
-        key(E);
-        key(F);
-        key(G);
-        key(H);
-        key(I);
-        key(J);
-        key(K);
-        key(L);
-        key(M);
-        key(N);
-        key(O);
-        key(P);
-        key(Q);
-        key(R);
-        key(S);
-        key(T);
-        key(U);
-        key(V);
-        key(W);
-        key(X);
-        key(Y);
-        key(Z);
-        case ArrowLeft:
-            sfmlCode = sf::Keyboard::Key::Left;
-            break;
-        case ArrowRight:
-            sfmlCode = sf::Keyboard::Key::Right;
-            break;
-        case ArrowUp:
-            sfmlCode = sf::Keyboard::Key::Up;
-            break;
-        case ArrowDown:
-            sfmlCode = sf::Keyboard::Key::Down;
-            break;
-        case Space:
-            sfmlCode = sf::Keyboard::Key::Space;
-            break;
-        case F11:
-            sfmlCode = sf::Keyboard::Key::F11;
-            break;
-        default:
-            sfmlCode = sf::Keyboard::Key::Unknown;
+    key(A);
+    key(B);
+    key(C);
+    key(D);
+    key(E);
+    key(F);
+    key(G);
+    key(H);
+    key(I);
+    key(J);
+    key(K);
+    key(L);
+    key(M);
+    key(N);
+    key(O);
+    key(P);
+    key(Q);
+    key(R);
+    key(S);
+    key(T);
+    key(U);
+    key(V);
+    key(W);
+    key(X);
+    key(Y);
+    key(Z);
+    case ArrowLeft:
+        sfmlCode = sf::Keyboard::Key::Left;
+        break;
+    case ArrowRight:
+        sfmlCode = sf::Keyboard::Key::Right;
+        break;
+    case ArrowUp:
+        sfmlCode = sf::Keyboard::Key::Up;
+        break;
+    case ArrowDown:
+        sfmlCode = sf::Keyboard::Key::Down;
+        break;
+    case Space:
+        sfmlCode = sf::Keyboard::Key::Space;
+        break;
+    case F11:
+        sfmlCode = sf::Keyboard::Key::F11;
+        break;
+    default:
+        sfmlCode = sf::Keyboard::Key::Unknown;
     }
 #undef key
 
@@ -156,10 +156,10 @@ void SfmlGraphicsApi::drawRectOutline(GlobalPosition pos, Size size, const Color
     this->window.draw(this->rectShape);
 }
 
-void SfmlGraphicsApi::loadResources(const std::vector<Resource> &resources) {
+void SfmlGraphicsApi::loadResources(const std::vector<Resource>& resources) {
     this->_resources.clear();
 
-    for (const auto &[path, type]: resources) {
+    for (const auto& [path, type] : resources) {
         if (type == ResourceType::Texture) {
             this->_resources.emplace_back(sf::Texture(path));
         }
@@ -169,17 +169,18 @@ void SfmlGraphicsApi::loadResources(const std::vector<Resource> &resources) {
     }
 }
 
-void SfmlGraphicsApi::drawText(GlobalPosition pos, const ResourceIndex handle, const char *str, const Color color) {
+void SfmlGraphicsApi::drawText(GlobalPosition pos, const ResourceIndex handle, const char* str, const Color color,
+                               const uint32_t fontSize) {
     this->textShape.setFont(std::get<sf::Font>(this->_resources[handle]));
     this->textShape.setString(str);
-    this->textShape.setCharacterSize(16);
+    this->textShape.setCharacterSize(fontSize);
     this->textShape.setFillColor(std::bit_cast<sf::Color>(color));
     this->textShape.setPosition({pos.x, pos.y});
     this->window.draw(this->textShape);
 }
 
 
-void SfmlGraphicsApi::drawSprite(const GlobalPosition pos, const Sprite &spr) {
+void SfmlGraphicsApi::drawSprite(const GlobalPosition pos, const Sprite& spr) {
     this->sprite.setTexture(std::get<sf::Texture>(this->_resources[spr.texture]));
     this->sprite.setTextureRect(std::bit_cast<sf::IntRect>(spr.rect));
 
@@ -195,12 +196,16 @@ void SfmlGraphicsApi::drawSprite(const GlobalPosition pos, const Sprite &spr) {
     this->window.draw(this->sprite);
 }
 
+void SfmlGraphicsApi::setClearColor(const Color color) {
+    this->clearColor = color;
+}
+
 extern "C" {
-IDisplayModule *create() {
+IDisplayModule* create() {
     return new SfmlGraphicsApi();
 }
 
-void destroy(const IDisplayModule *api) {
+void destroy(const IDisplayModule* api) {
     delete api;
 }
 }
