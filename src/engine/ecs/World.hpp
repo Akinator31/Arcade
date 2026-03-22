@@ -11,6 +11,7 @@
 #include "addons/Timer.hpp"
 #include "engine/reflection/TypeCounter.hpp"
 #include "internal/Registry/EventRegistry.hpp"
+#include "internal/Registry/GlobalEventRegistry.hpp"
 #include "components/Relation.hpp"
 #include "addons/Singleton.hpp"
 #include "components/CoreComponents.hpp"
@@ -20,7 +21,10 @@
 #include "utils/TablesReader.hpp"
 
 namespace ecs {
-    class World : public internal::EventRegistry, public StateRegistry, public SingletonRegistry {
+    class World : public internal::EventRegistry,
+                  public internal::GlobalEventRegistry,
+                  public StateRegistry,
+                  public SingletonRegistry {
         PhaseContainer phase_container;
         std::vector<Phase> phases;
         std::vector<PluginRecord> loaded_plugins;
@@ -353,6 +357,33 @@ namespace ecs {
             internal::EventRegistry::unlisten<Event>(entity, listener_id);
         }
 
+        template<typename Event>
+        void globalEmit(Event evt) {
+            internal::GlobalEventRegistry::emit<Event>(*this, evt);
+        }
+
+        template<typename Event, typename Func>
+            requires std::invocable<Func, World &, const Event>
+        EventListenerId globalListen(Func &&func) {
+            return internal::GlobalEventRegistry::listen<Event>(std::forward<Func>(func));
+        }
+
+        template<typename Event, typename Func>
+            requires std::invocable<Func, World &, const Event>
+        EventListenerId globalListen(const Entity owner, Func &&func) {
+            return internal::GlobalEventRegistry::listen<Event>(owner, std::forward<Func>(func));
+        }
+
+        template<typename Event>
+        void globalUnlisten() {
+            internal::GlobalEventRegistry::unlisten<Event>();
+        }
+
+        template<typename Event>
+        void globalUnlisten(const EventListenerId listener_id) {
+            internal::GlobalEventRegistry::unlisten<Event>(listener_id);
+        }
+
         template<typename Phase>
         PhaseId phase() {
             const PhaseId id = this->phase_container.phase<Phase>();
@@ -609,6 +640,12 @@ namespace ecs {
     template<typename Event, typename Func>
     EntityRef &&EntityRef::listen(Func &&func) {
         this->world.listen<Event>(this->entity(), func);
+        return std::move(*this);
+    }
+
+    template<typename Event, typename Func>
+    EntityRef &&EntityRef::globalListen(Func &&func) {
+        this->world.globalListen<Event>(this->entity(), func);
         return std::move(*this);
     }
 

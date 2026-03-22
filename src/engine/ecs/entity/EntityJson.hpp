@@ -2,18 +2,37 @@
 #include "type.hpp"
 #include "../World.hpp"
 #include "engine/parsing/JsonParser.hpp"
+#include "parsing/JsonSerializer.hpp"
 
-struct ComponentJson {
-    const char *name;
-    JsonValue value;
-};
+namespace ecs {
+    struct ComponentJson {
+        const char *name;
+        JsonValue value;
+    };
 
-struct EntityJson {
-    const char *name;
-    std::vector<ComponentJson> components;
-};
+    struct EntityJson {
+        const char *name;
+        std::vector<ComponentJson> components;
+    };
 
-ecs::Entity entity_from_json(ecs::World &world, const std::string &content) {
-    ecs::Entity entity = world.entity();
-    return entity;
+    inline std::string entityToJson(World &world, const Entity entity) {
+        const auto *name = world.get<Name>(entity);
+
+        const JsonValue object = JsonValue::makeObject();
+
+        auto nameValue = std::make_unique<JsonValue>(
+            JsonValue::makeString(strdup(name->value))
+        );
+
+        object.value.object->push_back(JsonObjectEntry{
+            .key = JsonCString(strdup("name")),
+            .value = std::move(nameValue)
+        });
+
+        return JsonSerializer::serialize(object);
+    }
+
+    inline Entity entityFromJson(World &, const std::string &) {
+        return {0, 0};
+    }
 }

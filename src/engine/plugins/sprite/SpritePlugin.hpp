@@ -8,14 +8,30 @@ struct SpriteAnimation {
     Timer timer;
     uint16_t start;
     uint16_t end;
+
+    fields(
+        field(uint16_t, "interval")
+        field(uint16_t, "tile_height")
+        field(uint16_t, "rows")
+        field(uint16_t, "cols")
+        field(uint16_t, "index")
+    )
 };
 
 struct SpriteAtlas {
-    uint16_t tile_width;
-    uint16_t tile_height;
-    uint16_t rows;
-    uint16_t cols;
+    uint16_t tile_width{};
+    uint16_t tile_height{};
+    uint16_t rows{};
+    uint16_t cols{};
     uint16_t index = 0;
+
+    fields(
+        field(uint16_t, "tile_width")
+        field(uint16_t, "tile_height")
+        field(uint16_t, "rows")
+        field(uint16_t, "cols")
+        field(uint16_t, "index")
+    )
 };
 
 namespace sprite_plugin_impl {

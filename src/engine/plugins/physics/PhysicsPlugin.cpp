@@ -1,5 +1,4 @@
 #include "PhysicsPlugin.hpp"
-
 #include <algorithm>
 #include <unordered_set>
 
