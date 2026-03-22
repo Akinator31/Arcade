@@ -57,7 +57,7 @@ namespace ecs::internal {
         // store at ComponentID: { buffer, element_size }
 
     public:
-        ecs::World &world;
+        World &world;
 
         datastructures::SparseSet<ArchetypeColumn, uint8_t> columns;
 

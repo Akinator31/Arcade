@@ -19,12 +19,12 @@ class Engine : IGameModule {
     std::chrono::steady_clock::time_point lastFrameTime = std::chrono::steady_clock::now();
     bool hasRenderedFrame = false;
     std::vector<Resource> _resources;
+    const std::function<void(Engine &, IDisplayModule *)> init;
 
     template<typename Scene>
     static uint16_t id() {
         return SceneTypeCounter::id<Scene>();
     }
-
 
     template<typename Scene>
     ecs::World *scenePtr() {
@@ -39,9 +39,8 @@ class Engine : IGameModule {
     }
 
 public:
-    explicit Engine(std::string name, const std::function<void(Engine &)> &init,
-                    const std::vector<Resource> &resources) : name(std::move(name)), _resources(resources) {
-        init(*this);
+    explicit Engine(std::string name, const std::function<void(Engine &, IDisplayModule *)> &init,
+                    const std::vector<Resource> &resources) : name(std::move(name)), _resources(resources), init(init) {
     }
 
 
@@ -82,7 +81,10 @@ public:
                                             ? std::chrono::duration<float>(now - this->lastFrameTime).count()
                                             : 0.f;
         this->lastFrameTime = now;
-        this->hasRenderedFrame = true;
+        if (!this->hasRenderedFrame) {
+            this->hasRenderedFrame = true;
+            this->init(*this, api);
+        }
         this->progress();
     };
 

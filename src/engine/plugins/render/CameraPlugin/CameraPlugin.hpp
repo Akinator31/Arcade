@@ -12,16 +12,25 @@ struct MainCamera : Required<Camera> {
 struct CameraTarget {
     ecs::Entity camera;
 
-    rayflect(value, {
-             value->member<uint32_t>("index");
-             value->member<uint32_t>("generation");
-             })
+
+    fields(
+        field(uint32_t, "index")
+        field(uint32_t, "generation")
+    )
 };
 
 struct CameraFollow {
-    ecs::Entity target;
+    ecs::Entity target{};
     GlobalPosition offset = {0.f, 0.f};
     bool centered = true;
+
+    fields(
+        field(uint32_t, "index")
+        field(uint32_t, "generation")
+        field(float, "offset_x")
+        field(float, "offset_y")
+        field(bool, "centered")
+    )
 };
 
 namespace camera_plugin_impl {
@@ -87,8 +96,8 @@ struct CameraPlugin {
 
         if (!has_main_camera) {
             world.create()
-                .set(Name{"MainCamera"}, Position{0.f, 0.f}, GlobalPosition{0.f, 0.f})
-                .add<MainCamera>();
+                    .set(Name{"MainCamera"}, Position{0.f, 0.f}, GlobalPosition{0.f, 0.f})
+                    .add<MainCamera>();
         }
     }
 

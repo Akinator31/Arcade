@@ -353,7 +353,7 @@ namespace ecs {
         return std::nullopt;
     }
 
-    void World::command(const std::function<void(World&)> &command) {
+    void World::command(const std::function<void(World &)> &command) {
         this->commands.push_back(command);
     }
 
@@ -382,7 +382,8 @@ namespace ecs {
             }
             this->removeEntityOfArchetype(updated_arch, updated_record.row);
         }
-        this->unlistenAll(entity);
+        this->EventRegistry::unlistenAll(entity);
+        this->GlobalEventRegistry::unlistenAll(entity);
         return this->entity_registry.destroy(entity);
     }
 

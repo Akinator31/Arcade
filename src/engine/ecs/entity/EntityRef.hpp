@@ -34,6 +34,9 @@ namespace ecs {
         template<typename Event, typename Func>
         EntityRef &&listen(Func &&func);
 
+        template<typename Event, typename Func>
+        EntityRef &&globalListen(Func &&func);
+
         template<typename T>
         T *get();
 

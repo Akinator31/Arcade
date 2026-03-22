@@ -1,3 +1,7 @@
+/**
+ * @file JsonParser.cpp
+ * @brief Implements JSON parsing and JSON value helpers.
+ */
 #include "JsonParser.hpp"
 
 #include <cctype>
@@ -5,15 +9,24 @@
 #include <memory>
 #include <utility>
 
+/**
+ * @brief Frees an allocated JSON string.
+ */
 void JsonFreeDeleter::operator()(const char *ptr) const {
     std::free(const_cast<char *>(ptr));
 }
 
+/**
+ * @brief Builds a JSON value by moving another one.
+ */
 JsonValue::JsonValue(JsonValue &&other) noexcept : type(other.type), value(other.value) {
     other.type = JsonValueType::Null;
     other.value.object = nullptr;
 }
 
+/**
+ * @brief Replaces this JSON value with a moved value.
+ */
 JsonValue &JsonValue::operator=(JsonValue &&other) noexcept {
     if (this == &other) {
         return *this;
@@ -26,14 +39,23 @@ JsonValue &JsonValue::operator=(JsonValue &&other) noexcept {
     return *this;
 }
 
+/**
+ * @brief Releases the resources held by this JSON value.
+ */
 JsonValue::~JsonValue() {
     this->reset();
 }
 
+/**
+ * @brief Creates a null JSON value.
+ */
 JsonValue JsonValue::makeNull() {
     return {};
 }
 
+/**
+ * @brief Creates a numeric JSON value.
+ */
 JsonValue JsonValue::makeNumber(const double number) {
     JsonValue result;
     result.type = JsonValueType::Number;
@@ -41,6 +63,9 @@ JsonValue JsonValue::makeNumber(const double number) {
     return result;
 }
 
+/**
+ * @brief Creates a boolean JSON value.
+ */
 JsonValue JsonValue::makeBoolean(const bool boolean) {
     JsonValue result;
     result.type = JsonValueType::Boolean;
@@ -48,6 +73,9 @@ JsonValue JsonValue::makeBoolean(const bool boolean) {
     return result;
 }
 
+/**
+ * @brief Creates a string JSON value.
+ */
 JsonValue JsonValue::makeString(const char *string) {
     JsonValue result;
     result.type = JsonValueType::String;
@@ -55,6 +83,9 @@ JsonValue JsonValue::makeString(const char *string) {
     return result;
 }
 
+/**
+ * @brief Creates an empty JSON object.
+ */
 JsonValue JsonValue::makeObject() {
     JsonValue result;
     result.type = JsonValueType::Object;
@@ -62,6 +93,9 @@ JsonValue JsonValue::makeObject() {
     return result;
 }
 
+/**
+ * @brief Creates an empty JSON array.
+ */
 JsonValue JsonValue::makeArray() {
     JsonValue result;
     result.type = JsonValueType::Array;
@@ -69,6 +103,9 @@ JsonValue JsonValue::makeArray() {
     return result;
 }
 
+/**
+ * @brief Returns the value stored under the given object key.
+ */
 const JsonValue *JsonValue::get(const char *key) const {
     if (this->type != JsonValueType::Object || this->value.object == nullptr) {
         return nullptr;
@@ -81,6 +118,9 @@ const JsonValue *JsonValue::get(const char *key) const {
     return nullptr;
 }
 
+/**
+ * @brief Returns the array element at the given index.
+ */
 const JsonValue *JsonValue::at(const size_t index) const {
     if (this->type != JsonValueType::Array || this->value.array == nullptr || index >= this->value.array->size()) {
         return nullptr;
@@ -88,6 +128,9 @@ const JsonValue *JsonValue::at(const size_t index) const {
     return &(*this->value.array)[index];
 }
 
+/**
+ * @brief Returns the number of entries in an object or array.
+ */
 size_t JsonValue::size() const {
     if (this->type == JsonValueType::Array && this->value.array != nullptr) {
         return this->value.array->size();
@@ -111,9 +154,15 @@ void JsonValue::reset() {
     this->value.object = nullptr;
 }
 
+/**
+ * @brief Initializes a JSON deserializer from raw text.
+ */
 JsonDeserializer::JsonDeserializer(const char *content) : scanner(content) {
 }
 
+/**
+ * @brief Parses a quoted JSON string.
+ */
 std::optional<const char *> JsonDeserializer::parseValueString() {
     if (!scanner.expect('"')) {
         return std::nullopt;
@@ -127,10 +176,16 @@ std::optional<const char *> JsonDeserializer::parseValueString() {
     return strdup(result.c_str());
 }
 
+/**
+ * @brief Parses a JSON number.
+ */
 std::optional<double> JsonDeserializer::parseValueNumber() {
     return scanner.take_value<double>();
 }
 
+/**
+ * @brief Parses a JSON boolean.
+ */
 std::optional<bool> JsonDeserializer::parseValueBool() {
     if (scanner.expect("true")) {
         return true;
@@ -141,6 +196,9 @@ std::optional<bool> JsonDeserializer::parseValueBool() {
     return std::nullopt;
 }
 
+/**
+ * @brief Parses a JSON null value.
+ */
 std::optional<std::nullptr_t> JsonDeserializer::parseValueNull() {
     if (scanner.expect("null")) {
         return nullptr;
@@ -148,6 +206,9 @@ std::optional<std::nullptr_t> JsonDeserializer::parseValueNull() {
     return std::nullopt;
 }
 
+/**
+ * @brief Parses a complete JSON object.
+ */
 std::optional<JsonValue> JsonDeserializer::parseValueObject() {
     if (!scanner.expect('{')) {
         return std::nullopt;
@@ -202,6 +263,9 @@ std::optional<JsonValue> JsonDeserializer::parseValueObject() {
     return std::nullopt;
 }
 
+/**
+ * @brief Parses a complete JSON array.
+ */
 std::optional<JsonValue> JsonDeserializer::parseValueArray() {
     if (!scanner.expect('[')) {
         return std::nullopt;
@@ -283,6 +347,9 @@ std::optional<JsonValue> JsonDeserializer::parseAnyValue() {
     return std::nullopt;
 }
 
+/**
+ * @brief Parses the first valid JSON value from the source.
+ */
 JsonValue JsonDeserializer::parse() {
     if (auto result = this->parseAnyValue(); result.has_value()) {
         return std::move(result.value());
