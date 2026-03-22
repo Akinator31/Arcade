@@ -2,7 +2,7 @@
 #include "Relation.hpp"
 #include "engine/datastructures/EcsVec.hpp"
 #include "engine/ecs/entity/type.hpp"
-#include "arcade/Types.hpp"
+#include "Types.hpp"
 #include "engine/reflection/type_id.hpp"
 
 namespace ecs {

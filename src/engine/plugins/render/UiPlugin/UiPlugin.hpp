@@ -1,4 +1,7 @@
 #pragma once
+#include <cmath>
+#include <cstring>
+#include <string_view>
 #include "engine/ecs/World.hpp"
 
 enum class MouseButtonLeftState {
@@ -15,12 +18,47 @@ struct PressedComponent : Required<Position, Size> {};
 
 struct TrackMouseOnPressedComponent : Required<HoveredComponent> {};
 
+struct AnimatedSprite : Required<Sprite, HoveredSensorComponent> {
+    Sprite base;
+    Sprite hover;
+    Sprite click;
+    bool enabled;
+
+    AnimatedSprite(const Sprite& base, const Sprite& hover, const Sprite& click, const bool enabled = true) :
+        Required(), base(base), hover(hover), click(click), enabled(enabled) {}
+};
+
 struct ImageOnHoverComponent : Required<HoveredSensorComponent> {
     Sprite image;
     Sprite imageOnHover;
 
     ImageOnHoverComponent(const Sprite& image, const Sprite& imageOnHover) :
-        Required<HoveredSensorComponent>{}, image(image), imageOnHover(imageOnHover) {}
+        Required{}, image(image), imageOnHover(imageOnHover) {}
+};
+
+struct Text {
+    ResourceIndex font;
+    const char* text;
+    Color color;
+    uint32_t fontSize;
+    IVec2 offset;
+};
+
+struct TextOnSpriteComponent : Required<Sprite> {
+    static constexpr size_t MAX_TEXT_LEN = 256;
+
+    ResourceIndex font;
+    char text[MAX_TEXT_LEN];
+    Color color;
+    uint32_t fontSize;
+    IVec2 offset;
+
+    TextOnSpriteComponent(const ResourceIndex font, const std::string& value, const Color color,
+                          const uint32_t fontSize = 16, const IVec2 offset = {0, 0}) :
+        Required(), font(font), text{}, color(color), fontSize(fontSize), offset(offset) {
+        std::strncpy(this->text, value.c_str(), MAX_TEXT_LEN - 1);
+        this->text[MAX_TEXT_LEN - 1] = '\0';
+    }
 };
 
 struct ClickedEvent {};
@@ -30,6 +68,25 @@ struct MouseEnterEvent {};
 struct MouseExitEvent {};
 
 bool mouseInRect(const IVec2& mousePos, const Position& position, const Size& size);
+
+SYSTEM(TextOnSpriteSys, On<PreUpdate>, With<TextOnSpriteComponent>) {
+    ITER(view) {
+        const auto textOnSprites = view.column<TextOnSpriteComponent>();
+
+        for (uint i = 0; i < view.count(); i++) {
+            view.world.set(
+                view.entity(i),
+                Text{
+                    .font = textOnSprites[i].font,
+                    .text = textOnSprites[i].text,
+                    .color = textOnSprites[i].color,
+                    .fontSize = textOnSprites[i].fontSize,
+                    .offset = textOnSprites[i].offset
+                }
+            );
+        }
+    }
+};
 
 SYSTEM(MouseButtonLeftSys, On<PreUpdate>) {
     static void run(ecs::World& world) {
@@ -136,29 +193,61 @@ SYSTEM(TrackMouseOnPressedSys, With<TrackMouseOnPressedComponent, PressedCompone
     }
 };
 
+SYSTEM(AnimatedSpriteSys, With<AnimatedSprite, Sprite>, On<PostUpdate>) {
+    ITER(view) {
+        auto* animatedSprites = view.column<AnimatedSprite>();
+        auto* sprites = view.column<Sprite>();
+
+        for (uint i = 0; i < view.count(); i++) {
+            if (!animatedSprites[i].enabled) {
+                sprites[i] = animatedSprites[i].base;
+                continue;
+            }
+
+            const ecs::Entity entity = view.entity(i);
+
+            if (view.world.has<PressedComponent>(entity)) {
+                sprites[i] = animatedSprites[i].click;
+            } else if (view.world.has<HoveredComponent>(entity)) {
+                sprites[i] = animatedSprites[i].hover;
+            } else {
+                sprites[i] = animatedSprites[i].base;
+            }
+        }
+    }
+};
+
 struct UiPlugin {
     void load(ecs::World& world) {
         world.state(MouseButtonLeftState::NONE);
+        world.registerComponent<Text>();
         world.registerComponent<HoveredComponent>();
         world.registerComponent<HoveredSensorComponent>();
         world.registerComponent<ImageOnHoverComponent>();
         world.registerComponent<TrackMouseOnPressedComponent>();
         world.registerComponent<PressedComponent>();
+        world.registerComponent<TextOnSpriteComponent>();
+        world.registerComponent<AnimatedSprite>();
         world.system<MouseButtonLeftSys>();
+        world.system<TextOnSpriteSys>();
         world.system<HoveredSys>();
         world.system<ImageOnHoverSys>();
         world.system<UnHoveredButtonSys>();
         world.system<EntityClickedSys>();
         world.system<TrackMouseOnPressedSys>();
         world.system<PressedSys>();
+        world.system<AnimatedSpriteSys>();
     }
 
     void unload(ecs::World& world) {
         world.remove<MouseButtonLeftSys>();
+        world.remove<TextOnSpriteSys>();
         world.remove<HoveredSys>();
-        world.system<EntityClickedSys>();
+        world.remove<EntityClickedSys>();
         world.remove<TrackMouseOnPressedSys>();
         world.remove<PressedSys>();
+        world.remove<AnimatedSpriteSys>();
         world.remove<ImageOnHoverSys>();
+        world.remove<UnHoveredButtonSys>();
     }
 };

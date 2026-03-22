@@ -1,13 +1,79 @@
 #pragma once
+#include <cmath>
 #include "UiPlugin.hpp"
-#include "arcade/Types.hpp"
+#include "Types.hpp"
 #include "ecs/World.hpp"
 
 struct Button {
+    static constexpr ResourceIndex LARGE_BUTTON_TEXTURE = 0;
+    static constexpr ResourceIndex LARGE_BUTTON_HOVER_TEXTURE = 1;
+    static constexpr ResourceIndex LARGE_BUTTON_CLICK_TEXTURE = 2;
+
+    struct Props {
+        Position pos;
+        float scale;
+        bool animated;
+    };
+
+    static Props Default() {
+        return Props{
+            .pos = {0, 0},
+            .scale = 1.f,
+            .animated = true
+        };
+    }
+
+    static void construct(ecs::EntityRef& ref, const Props& props) {
+        const Sprite sprite{
+            .texture = LARGE_BUTTON_TEXTURE,
+            .scale = {props.scale, props.scale},
+            .rect = {
+                .left = 0,
+                .top = 0,
+                .width = 96,
+                .height = 32,
+            }
+        };
+
+        const Sprite spriteOnHover{
+            .texture = LARGE_BUTTON_HOVER_TEXTURE,
+            .scale = {props.scale, props.scale},
+            .rect = {
+                .left = 0,
+                .top = 0,
+                .width = 96,
+                .height = 32,
+            }
+        };
+
+        const Sprite spriteOnClick{
+            .texture = LARGE_BUTTON_CLICK_TEXTURE,
+            .scale = {props.scale, props.scale},
+            .rect = {
+                .left = 0,
+                .top = 0,
+                .width = 96,
+                .height = 32,
+            }
+        };
+
+        const float absScale = std::abs(props.scale);
+
+        ref.set(
+            props.pos,
+            Size{static_cast<float>(sprite.rect.width) * absScale, static_cast<float>(sprite.rect.height) * absScale},
+            sprite,
+            AnimatedSprite(sprite, spriteOnHover, spriteOnClick, props.animated)
+        );
+    }
+};
+
+struct SpriteWithText {
     struct Props {
         Sprite image;
-        Sprite imageOnHover;
-        Position pos;
+        std::string text;
+        ResourceIndex font;
+        uint32_t fontSize;
     };
 
     static Props Default() {
@@ -22,17 +88,9 @@ struct Button {
                     .height = 0,
                 }
             },
-            .imageOnHover = {
-                .texture = 0,
-                .scale = {0, 0},
-                .rect = {
-                    .left = 0,
-                    .top = 0,
-                    .width = 0,
-                    .height = 0,
-                }
-            },
-            .pos = {0, 0}
+            .text = "",
+            .font = 0,
+            .fontSize = 16
         };
     }
 
@@ -51,28 +109,10 @@ struct Button {
             }
         };
 
-        const Sprite spriteOnHover{
-            .texture = props.imageOnHover.texture,
-            .scale = {
-                props.imageOnHover.scale.x,
-                props.imageOnHover.scale.y
-            },
-            .rect = {
-                .left = props.imageOnHover.rect.left,
-                .top = props.imageOnHover.rect.top,
-                .width = props.imageOnHover.rect.width,
-                .height = props.imageOnHover.rect.height,
-            }
-        };
-
         ref.set(
-            props.pos,
             Size{static_cast<float>(props.image.rect.width), static_cast<float>(props.image.rect.height)},
             sprite,
-            ImageOnHoverComponent{
-                sprite,
-                spriteOnHover,
-            }
+            TextOnSpriteComponent(props.font, props.text, Color{0, 0, 0, 0}, props.fontSize)
         );
     }
 };
