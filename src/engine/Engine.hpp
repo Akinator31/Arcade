@@ -83,7 +83,7 @@ public:
         }
 
         if (this->currentScene == nullptr) {
-            return;
+            throw std::runtime_error("No current scene specified!");
         }
 
         this->currentScene->api = api;
