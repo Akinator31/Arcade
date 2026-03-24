@@ -40,7 +40,7 @@ namespace {
             sprite_positions.push_back(pos);
         }
 
-        void drawText(const GlobalPosition, const ResourceIndex, const char *, const Color) override {
+        void drawText(const GlobalPosition, const ResourceIndex, const char *, const Color, const uint32_t) override {
         }
 
         [[nodiscard]] IVec2 getMousePosition() const override {
@@ -63,6 +63,9 @@ namespace {
         }
 
         void loadResources(const std::vector<Resource> &) override {
+        }
+
+        void setClearColor(const Color) override {
         }
     };
 }

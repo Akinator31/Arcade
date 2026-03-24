@@ -1,7 +1,7 @@
 #pragma once
 
 #include "DynamicLoader.hpp"
-#include "arcade/IDisplayModule.hpp"
+#include "IDisplayModule.hpp"
 
 using Create = Member<IDisplayModule* (*)(), "create">;
 using Destroy = Member<void (*)(IDisplayModule *), "destroy">;

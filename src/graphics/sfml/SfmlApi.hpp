@@ -1,6 +1,6 @@
 #pragma once
 
-#include "arcade/IDisplayModule.hpp"
+#include "IDisplayModule.hpp"
 
 #include <SFML/Graphics.hpp>
 
@@ -17,10 +17,12 @@ class SfmlGraphicsApi : public IDisplayModule {
     sf::Clock clock;
     float deltaTime = 0.f;
     bool mouseReleasedThisFrame = false;
+    Color clearColor;
+    USize windowSize{};
 
 public:
-    SfmlGraphicsApi() : rectShape({0, 0}), sprite(defaultTexture), textShape(defaultFont) {
-    }
+    SfmlGraphicsApi() : rectShape({0, 0}), sprite(defaultTexture), textShape(defaultFont),
+                        clearColor(Color{0, 0, 0, 255}) {}
 
     void init() override;
 
@@ -38,7 +40,7 @@ public:
 
     bool isKeyPressed(KeyboardCode code) override;
 
-    void loadResources(const std::vector<Resource> &resources) override;
+    void loadResources(const std::vector<Resource>& resources) override;
 
     IVec2 getMousePosition() const override;
 
@@ -52,7 +54,9 @@ public:
                          float outlineThickness) override;
 
 
-    void drawSprite(GlobalPosition pos, const Sprite &spr) override;
+    void drawSprite(GlobalPosition pos, const Sprite& spr) override;
 
-    void drawText(GlobalPosition pos, ResourceIndex handle, const char *str, Color color) override;
+    void drawText(GlobalPosition pos, ResourceIndex handle, const char* str, Color color, uint32_t fontSize) override;
+
+    void setClearColor(Color color) override;
 };

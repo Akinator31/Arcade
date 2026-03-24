@@ -9,7 +9,7 @@
 #include "render/UiPlugin/UiPlugin.hpp"
 
 struct DefaultPlugin {
-    void load(ecs::World &world) {
+    void load(ecs::World& world) {
         world.plugin<PositionPropagationPlugin>();
         world.plugin<RenderPlugin>();
         world.plugin<PhysicsPlugin>();
@@ -19,9 +19,22 @@ struct DefaultPlugin {
         world.plugin<SpritePlugin>();
     }
 
-    void unload(ecs::World &world) {
-        world.removePlugin<PositionPropagationPlugin>();
-        world.removePlugin<RenderPlugin>();
-        world.plugin<CliPlugin>();
+    void unload(ecs::World&) {
+        // le world fait déjà un le unload ???
+    }
+};
+
+struct MenuScenePlugin {
+    void load(ecs::World& world) {
+        world.plugin<PositionPropagationPlugin>();
+        world.plugin<RenderPlugin>();
+        world.plugin<PhysicsPlugin>();
+        world.plugin<ControlPlugin>();
+        world.plugin<UiPlugin>();
+        world.plugin<SpritePlugin>();
+    }
+
+    void unload(ecs::World&) {
+        // le world fait déjà un le unload ???
     }
 };
