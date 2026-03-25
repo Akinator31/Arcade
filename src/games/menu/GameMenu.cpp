@@ -34,7 +34,7 @@ namespace {
 
         for (std::filesystem::directory_iterator it(LIB_DIR, ec); const auto &entry: it) {
             if (const std::string &path = entry.path().string();
-                path.ends_with(".so") && entry.path().filename().string().starts_with(prefix)) {
+                path.ends_with(".so") && path.starts_with(prefix) && !ec && entry.is_regular_file()) {
                 libs.push_back(SelectableLib{
                     .path = path,
                     .label = makeDisplayName(entry.path().filename().string(), prefix)
