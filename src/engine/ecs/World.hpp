@@ -651,6 +651,11 @@ namespace ecs {
         return this->world.get<T>(this->entity());
     }
 
+    template<typename T>
+    bool EntityRef::has() const {
+        return this->world.has<T>(this->entity());
+    }
+
     template<typename... Components>
     EntityRef EntityRef::make(World &world, Components... all) {
         const EntityRef ref = world.create().set(all...);

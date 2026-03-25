@@ -18,8 +18,10 @@ struct CollisionEnd {
     ecs::Entity target;
 };
 
-struct Gravity {
+
+struct Gravity : Required<Velocity> {
     float scale = 1;
+    explicit Gravity(float scale) : scale(scale) {}
 };
 
 SYSTEM(IntegrateVelocitySys, With<Velocity, Position>, Without<RigidBody>, On<PostUpdate>) {

@@ -14,23 +14,23 @@ enum Texture {
     START_BUTTON_HOVER
 };
 
-SYSTEM(PlayerSys, ecs::EntityRef, On<Add>) {
-    explicit PlayerSys(ecs::World& world) : EntityRef(
-        world.create().set(Position{0, 1500}, Size{100, 100}, Velocity{350, 0}, Color::white(),
-                           Gravity{1100}, RigidBody::RIGID, GroundSensorComponent{})) {
-        listen<CollisionStart>([](ecs::World& world, Entity entity, CollisionStart event) {
-            if (world.has<Enemy>(event.target)) {
-                world.kill(entity);
-            }
-        });
-    }
 
+SYSTEM(PlayerSys, ecs::EntityRef, On<Update>) {
+    explicit PlayerSys(ecs::World &world) : EntityRef(world.create()) {
+        this->add<EmitCollisionEvent, GroundSensorComponent>().set(Position{100, 100}, Size{100, 100}, Color::blue(), RigidBody::RIGID, Gravity(1600), Velocity(300, 0)).listen<CollisionStart>([this](ecs::World &world, ecs::Entity , CollisionStart collision) {
+                if (world.has<Enemy>(collision.target)) {
+                    this->set(Position(100, 100), Velocity(300, 0));
+                }
+        });
+        world.set(camera_plugin_impl::mainCamera(world), CameraFollow(this->entity()));
+    }
     RUN() {
-        if (this->world.api->isKeyPressed(Space) && this->world.has<IsOnGround>(this->entity())) {
-            get<Velocity>()->y = -500;
+        if (world.api->isKeyPressed(KeyboardCode::Space) && this->has<IsOnGround>()) {
+            this->set(Velocity(300, -500));
         }
     }
 };
+
 
 extern "C" IGameModule* load() {
     return reinterpret_cast<IGameModule*>(new Engine(
@@ -39,9 +39,9 @@ extern "C" IGameModule* load() {
             engine.setScene<DefaultScene>();
             world.plugin<DefaultPlugin>();
             world.registerComponent<Enemy>();
+            world.create().set(Position{-300, 500}, Size{10000, 100}, Color::red(), RigidBody::RIGID);
+            world.create().set(Position(1000, 480), Size(100, 100), RigidBody::RIGID, Color::yellow()).add<Enemy>();
             world.system<PlayerSys>();
-            world.create().add<Enemy>().set(Position{300, 1500}, Size{100, 100}, Color::blue(), RigidBody::RIGID);
-            world.create().set(Position{-300, 1800}, Size{10000, 100}, Color::red(), RigidBody::RIGID);
         }, {
             Resource::texture("./assets/pacman.png"),
             Resource::texture("./assets/Start.png"),
