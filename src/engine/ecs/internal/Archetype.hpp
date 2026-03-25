@@ -79,9 +79,9 @@ namespace ecs::internal {
 
         [[nodiscard]] const EntityType &getType() const;
 
-        internal::EntityRow addEntity(Entity);
+        EntityRow addEntity(Entity);
 
-        internal::EntityRow cloneEntity(internal::EntityRow row, Entity entity);
+        EntityRow cloneEntity(internal::EntityRow row, Entity entity);
 
         std::optional<Entity> removeEntity(internal::EntityRow row);
 
@@ -103,7 +103,7 @@ namespace ecs::internal {
 
         [[nodiscard]] bool stores(ComponentID component) const;
 
-        [[nodiscard]] std::size_t count() const;
+        [[nodiscard]] EntityRow count() const;
 
         [[nodiscard]] const Entity *getEntities() const;
 

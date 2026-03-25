@@ -70,7 +70,7 @@ namespace ecs::internal {
 
         template<typename Event, typename Func>
             requires std::invocable<Func, ecs::World &, const Event>
-        EventListenerId listen(const ecs::Entity owner, Func &&func) {
+        EventListenerId listen(const Entity owner, Func &&func) {
             return this->add<Event>(owner.index, std::forward<Func>(func));
         }
 

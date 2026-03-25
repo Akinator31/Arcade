@@ -23,7 +23,7 @@ struct Button {
         };
     }
 
-    static void construct(ecs::EntityRef& ref, const Props& props) {
+    static void construct(ecs::EntityRef &ref, const Props &props) {
         const Sprite sprite{
             .texture = LARGE_BUTTON_TEXTURE,
             .scale = {props.scale, props.scale},
@@ -94,7 +94,7 @@ struct SpriteWithText {
         };
     }
 
-    static void construct(ecs::EntityRef& ref, const Props& props) {
+    static void construct(ecs::EntityRef &ref, const Props &props) {
         const Sprite sprite{
             .texture = props.image.texture,
             .scale = {
@@ -111,8 +111,7 @@ struct SpriteWithText {
 
         ref.set(
             Size{static_cast<float>(props.image.rect.width), static_cast<float>(props.image.rect.height)},
-            sprite,
-            TextOnSpriteComponent(props.font, props.text, Color{0, 0, 0, 0}, props.fontSize)
-        );
+            sprite
+        ).child().set(Text{props.font, strdup(props.text.c_str()), Color{0, 0, 0, 0}, props.fontSize});
     }
 };

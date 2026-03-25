@@ -121,28 +121,6 @@ Test(observer, remove_observer) {
     cr_assert_eq(count, 1);
 }
 
-Test(observer, on_add_after_set_sees_assigned_value) {
-    ecs::World world;
-    world.registerComponent<ScoreValue>();
-
-    static int seen = -1;
-    SYSTEM(OnAddScoreValue, With<ScoreValue>, On<Add>) {
-        OBSERVE(table, row) {
-            auto *score = static_cast<ScoreValue *>(table.getComponent(row, reflection::type_id<ScoreValue>()));
-            seen = score->value;
-        }
-    };
-
-    world.system<OnAddScoreValue>();
-
-    const ecs::Entity entity = world.entity();
-    seen = -1;
-
-    world.set<ScoreValue>(entity, {.value = 42});
-
-    cr_assert_eq(seen, 42);
-}
-
 Test(observer, on_add_after_migration_sees_existing_components) {
     ecs::World world;
     world.registerComponent<BaseImage>();

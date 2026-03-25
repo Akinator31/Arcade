@@ -98,7 +98,7 @@ namespace ecs::internal {
 
     const EntityType &Archetype::getType() const { return this->type; }
 
-    std::size_t Archetype::count() const { return this->entities.size; }
+    EntityRow Archetype::count() const { return this->entities.size; }
 
     const Entity *Archetype::getEntities() const { return this->entities.data; }
 
