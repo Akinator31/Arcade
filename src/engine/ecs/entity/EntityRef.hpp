@@ -42,6 +42,9 @@ namespace ecs {
         template<typename T>
         T *get();
 
+        template<typename T>
+        bool has() const;
+
         template<class... Components>
         static EntityRef make(World &world, Components... all);
 

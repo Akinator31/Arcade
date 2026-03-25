@@ -156,8 +156,10 @@ void GravitySys::iter(ArchetypeView &view) {
     const auto *gravity = view.column<Gravity>();
     auto *velocities = view.column<Velocity>();
     const float dt = view.world.deltaTime;
+    std::cout << dt << std::endl;
 
     for (uint i = 0; i < view.count(); ++i) {
+        std::cout << velocities[i].y << std::endl;
         velocities[i].y += dt * gravity[i].scale;
     }
 }
