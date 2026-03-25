@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include <deque>
 #include <functional>
 #include <utility>
 
@@ -13,24 +14,30 @@ struct SceneFamily;
 using SceneTypeCounter = reflection::TypeCounter<SceneFamily>;
 
 class Engine : IGameModule {
-    datastructures::SparseSet<ecs::World*> scenes;
-    ecs::World* currentScene = nullptr;
+    datastructures::SparseSet<ecs::World *> scenes;
+    ecs::World *currentScene = nullptr;
     std::string name = "NoName";
     std::chrono::steady_clock::time_point lastFrameTime = std::chrono::steady_clock::now();
     bool hasRenderedFrame = false;
     std::vector<Resource> _resources;
-    const std::function<void(Engine&, IDisplayModule*)> init;
+    const std::function<void(Engine &, IDisplayModule *)> init;
 
-    template <typename Scene>
+public:
+    std::deque<CoreAction> pendingActions;
+
+
+    template<typename Scene>
     static uint16_t id() {
         return SceneTypeCounter::id<Scene>();
     }
 
-    template <typename Scene>
-    ecs::World* scenePtr() {
-        ecs::World*& scene = this->scenes.getOrCreate(this->id<Scene>());
+    template<typename Scene>
+    ecs::World *scenePtr() {
+        ecs::World *&scene = this->scenes.getOrCreate(this->id<Scene>());
         if (scene == nullptr) {
             scene = new ecs::World();
+            scene->singleton_init<Engine>(this);
+
             if constexpr (ecs::IsPlugin<Scene>) {
                 scene->plugin<Scene>();
             }
@@ -39,28 +46,29 @@ class Engine : IGameModule {
     }
 
 public:
-    explicit Engine(std::string name, const std::function<void(Engine&, IDisplayModule*)>& init,
-                    const std::vector<Resource>& resources) : name(std::move(name)), _resources(resources),
-                                                              init(init) {}
+    explicit Engine(std::string name, const std::function<void(Engine &, IDisplayModule *)> &init,
+                    const std::vector<Resource> &resources) : name(std::move(name)), _resources(resources),
+                                                              init(init) {
+    }
 
 
     ~Engine() override {
-        for (const ecs::World* scene : this->scenes.getDense()) {
+        for (const ecs::World *scene: this->scenes.getDense()) {
             delete scene;
         }
     }
 
-    template <typename Scene>
-    ecs::World& scene() {
+    template<typename Scene>
+    ecs::World &scene() {
         return *this->scenePtr<Scene>();
     }
 
-    template <typename Scene>
+    template<typename Scene>
     void progress() {
         this->scenes.get(this->id<Scene>())->progress();
     }
 
-    template <typename Scene>
+    template<typename Scene>
     void setScene() {
         this->currentScene = this->scenePtr<Scene>();
     }
@@ -69,11 +77,11 @@ public:
         this->currentScene->progress();
     }
 
-    std::string& getName() override {
+    std::string &getName() override {
         return this->name;
     };
 
-    void update(IDisplayModule* api) override {
+    void update(IDisplayModule *api) override {
         const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
 
         if (!this->hasRenderedFrame) {
@@ -92,7 +100,17 @@ public:
         this->progress();
     };
 
-    const std::vector<Resource>& getResources() override {
+    const std::vector<Resource> &getResources() override {
         return this->_resources;
+    }
+
+    std::optional<CoreAction> consumeCoreAction() override {
+        if (pendingActions.empty()) {
+            return std::nullopt;
+        }
+
+        CoreAction next = pendingActions.front();
+        pendingActions.pop_front();
+        return next;
     }
 };

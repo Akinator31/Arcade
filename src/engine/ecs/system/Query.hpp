@@ -3,7 +3,6 @@
 //
 
 #pragma once
-#include <vector>
 #include "../entity/type.hpp"
 #include "../internal/Archetype.hpp"
 #include "engine/reflection/type_id.hpp"
@@ -41,11 +40,7 @@ public:
             if (!table.has(cid))
                 return false;
         }
-        for (const ecs::ComponentID cid: this->_excluded) {
-            if (table.has(cid))
-                return false;
-        }
-        return true;
+        return std::ranges::all_of(this->_excluded, [&table](const ecs::ComponentID cid) { return !table.has(cid); });
     }
 };
 
