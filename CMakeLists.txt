@@ -75,8 +75,25 @@ if (BUILD_PLATFORM_LIBS)
     )
 endif ()
 
+if (BUILD_PLATFORM_LIBS)
+    find_package(Curses REQUIRED)
+
+    add_library(ncurses_api SHARED src/graphics/ncurses/NcursesApi.cpp src/graphics/ncurses/NcursesApi.hpp)
+
+    target_include_directories(ncurses_api PRIVATE src/graphics/ncurses ${CURSES_INCLUDE_DIR})
+
+    target_link_libraries(ncurses_api PRIVATE arcade_shared arcade_shared_iface ${CURSES_LIBRARIES})
+
+    target_compile_options(ncurses_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    target_link_options(ncurses_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+    set_target_properties(ncurses_api PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib OUTPUT_NAME arcade_ncurses PREFIX "")
+endif ()
+
 if (BUILD_CORE_PROGRAM)
-    add_executable(arcade src/main.cpp)
+    add_executable(arcade src/main.cpp
+            src/graphics/ncurses/NcursesApi.cpp
+            src/graphics/ncurses/NcursesApi.hpp
+    )
     target_include_directories(arcade PRIVATE src/core)
     target_link_libraries(arcade PRIVATE ${CMAKE_DL_LIBS} arcade_shared_iface arcade_engine_headers)
     target_compile_options(arcade PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
