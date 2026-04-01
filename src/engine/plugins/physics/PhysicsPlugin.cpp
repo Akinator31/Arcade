@@ -14,6 +14,11 @@ namespace {
         }
     };
 
+    struct Allowed {
+        bool x = false;
+        bool y = false;
+    };
+
     struct CollisionPairHash {
         std::size_t operator()(const CollisionPair &pair) const noexcept {
             const uint64_t a = (static_cast<uint64_t>(pair.source.index) << 32) | pair.source.generation;
@@ -23,8 +28,8 @@ namespace {
     };
 
     struct CollisionState {
-        std::unordered_set<CollisionPair, CollisionPairHash> previous;
-        std::unordered_set<CollisionPair, CollisionPairHash> current;
+        std::unordered_map<CollisionPair, Allowed, CollisionPairHash> previous;
+        std::unordered_map<CollisionPair, Allowed, CollisionPairHash> current;
     };
 
     bool touches(const Zone &a, const Zone &b) {
@@ -116,7 +121,10 @@ void PhysicsSys::iter(ArchetypeView &view) {
         const Zone next{positions[i], sizes[i]};
         for (const auto &[entity, zone, flags]: hits) {
             if (entity != self && flags.any() && touches(next, zone)) {
-                state->current.insert({self, entity});
+                CollisionPair pair = {self, entity};
+                state->current[pair] = Allowed{
+                    .x = allowedX == dx, .y = allowedY == dy
+                };
             }
         }
     }
@@ -137,14 +145,14 @@ void PhysicsSys::run(ecs::World &world) const {
     auto *state = world.singleton_get<CollisionState>();
 
     for (const auto &pair: state->current) {
-        if (!state->previous.contains(pair)) {
-            world.emit(pair.source, CollisionStart{pair.target});
+        if (!state->previous.contains(pair.first)) {
+            world.emit(pair.first.source, CollisionStart{pair.first.target, pair.second.x, pair.second.y});
         }
     }
 
     for (const auto &pair: state->previous) {
-        if (!state->current.contains(pair)) {
-            world.emit(pair.source, CollisionEnd{pair.target});
+        if (!state->current.contains(pair.first)) {
+            world.emit(pair.first.source, CollisionEnd{pair.first.target});
         }
     }
 
