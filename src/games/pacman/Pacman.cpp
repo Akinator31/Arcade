@@ -1,53 +1,63 @@
 #include "engine/Engine.hpp"
 #include "engine/plugins/DefaultPlugins.hpp"
+#include "engine/plugins/tilemap/TileMapPlugin.hpp"
+#include "IGameModule.hpp"
 
-struct DefaultScene;
-struct MyPlayer;
-struct Enemy;
+struct DefaultScene : MenuScenePlugin {};
 
-SYSTEM(Move, With<MyPlayer, Velocity>, On<Update>) {
-    ITER(view) {
-        auto *velocities = view.column<Velocity>();
+namespace {
+    constexpr float kTileSize = 64.f;
 
-        for (uint i = 0; i < view.count(); i++) {
-            if (view.world.api->isKeyPressed(KeyboardCode::D)) {
-                velocities[i].x = 100;
-            } else {
-                velocities[i].x = 0;
-            }
-        }
-    }
-};
-
-SYSTEM(PlayerSys, ecs::EntityRef, On<Update>) {
-    PlayerSys(ecs::World &world) : EntityRef(
-        world.create().add<MyPlayer>().set(Position{0, 0}, Size{100, 100}, Velocity{0, 0}, Color::WHITE)) {
-        listen<CollisionStart>([](ecs::World &world, Entity entity, CollisionStart event) {
-            if (world.has<Enemy>(event.target)) {
-                world.kill(entity);
-            }
-        });
-    }
-
-    RUN() {
-        if (this->world.api->isKeyPressed(KeyboardCode::Space) && get<Velocity>()->y == 0) {
-            get<Velocity>()->y += 100;
-        }
-    }
-};
-
-
-extern "C" Engine *load() {
-    return new Engine("Example", [](Engine &engine) {
-        ecs::World &world = engine.scene<DefaultScene>();
-
-        world.create().add<MyPlayer>().set(Position{0, 0}, Size{100, 100}, Gravity{10}, RigidBody::RIGID,
-                                           Velocity{300, 0}, Color::WHITE);
-        world.create().add<Enemy>().set(Position{300, 0}, Size{100, 100}, Color::BLUE, RigidBody::RIGID);
-        world.create().set(Position{-300, 1800}, Size{1000, 100}, Color::RED, RigidBody::RIGID);
-    });
+    const char *map =
+            "############################\n"
+            "#            ##            #\n"
+            "# #### ##### ## ##### #### #\n"
+            "# #### ##### ## ##### #### #\n"
+            "#                          #\n"
+            "###### ## ######## ## ######\n"
+            "#      ##    ##    ##      #\n"
+            "# ########## ## ########## #\n"
+            "#                          #\n"
+            "############################\n";
 }
 
-extern "C" void unload(const IGame *game) {
+extern "C" IGameModule *load() {
+    auto *engine = new Engine("Pacman", [](Engine &engine, IDisplayModule *api) {
+        ecs::World &world = engine.scene<DefaultScene>();
+        engine.setScene<DefaultScene>();
+        world.plugin<TileMapPlugin>();
+        api->setClearColor({0, 0, 0, 255});
+
+        const ecs::EntityRef wall = world.create().add<IsGround>().set(
+            RigidBody::RIGID,
+            Position{0.f, 0.f},
+            Size{kTileSize, kTileSize},
+            Color::blue()
+        );
+        TileMapPlugin::spawn(wall, {.map = map, .wall = '#'});
+
+        world.create().set(
+            Position{1.1f * kTileSize, 1.1f * kTileSize},
+            Size{kTileSize / 2.f, kTileSize / 2.f},
+            CharacterController{
+                .left = Q,
+                .right = D,
+                .up = Z,
+                .down = S,
+                .speed = 220.f
+            },
+            Color::white(),
+            RigidBody::RIGID
+        );
+        world.create().set(
+            Position{4.f * kTileSize, 2.f * kTileSize},
+            Size{kTileSize * 0.8f, kTileSize * 0.8f},
+            Color::blue()
+        );
+    }, {});
+    return reinterpret_cast<IGameModule *>(engine);
+}
+
+extern "C" void unload(const IGameModule *game) {
     delete game;
 }

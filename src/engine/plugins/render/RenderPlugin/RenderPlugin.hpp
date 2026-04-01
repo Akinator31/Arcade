@@ -4,7 +4,6 @@
 #include "engine/plugins/render/CameraPlugin/CameraPlugin.hpp"
 #include "engine/plugins/render/PositionPropagationPlugin/PositionPropagationPlugin.hpp"
 #include "engine/plugins/render/UiPlugin/UiPlugin.hpp"
-#include "plugins/render/UiPlugin/UiPlugin.hpp"
 
 template<class Fn>
 Fn get_virtual(void *obj, const size_t index) {

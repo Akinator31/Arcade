@@ -19,6 +19,10 @@ struct Required {
 template<typename T>
 struct RelationSource {
     datastructures::EcsVec<ecs::Entity> entities;
+
+    static void onRemove(ecs::World &, ecs::Entity, const RelationSource *source) {
+        const_cast<RelationSource *>(source)->entities.free();
+    }
 };
 
 template<typename T>
