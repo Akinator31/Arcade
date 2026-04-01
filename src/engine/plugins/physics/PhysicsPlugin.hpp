@@ -12,6 +12,8 @@ struct EmitCollisionEvent {
 
 struct CollisionStart {
     ecs::Entity target;
+    bool x;
+    bool y;
 };
 
 struct CollisionEnd {
