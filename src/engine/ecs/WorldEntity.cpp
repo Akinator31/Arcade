@@ -29,7 +29,10 @@ namespace ecs {
         newEntityRecord.row = source_archetype.cloneEntity(entityRecord.row, newEntity);
 
         if (this->has<Children>(newEntity)) {
-            this->get<Children>(newEntity)->entities.size = 0;
+            auto &entities = this->get<Children>(newEntity)->entities;
+            entities.data = nullptr;
+            entities.size = 0;
+            entities.capacity = 0;
         }
 
         if (this->has<Name>(newEntity)) {

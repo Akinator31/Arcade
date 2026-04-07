@@ -2,7 +2,7 @@
 #include <optional>
 
 #include "Engine.hpp"
-#include "plugins/DefaultPlugins.hpp"
+#include "plugins/DefaultPlugin.hpp"
 
 struct DefaultScene : MenuScenePlugin {
 };

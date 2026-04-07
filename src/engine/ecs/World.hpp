@@ -626,6 +626,10 @@ namespace ecs {
         return std::move(*this);
     }
 
+    inline EntityRef EntityRef::clone() const {
+        return EntityRef(this->world, this->world.clone(this->entity()));
+    }
+
     inline EntityRef EntityRef::child() const {
         return this->world.create().relate<Hierarchy>(this->entity());
     }

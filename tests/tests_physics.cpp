@@ -177,6 +177,7 @@ Test(control, ground_sensor_sets_and_clears_is_on_ground) {
 
     world.deltaTime = 1.f;
     const ecs::Entity floor = world.create().set(
+        IsGround{},
         RigidBody::RIGID,
         Size{100.f, 20.f},
         Position(0.f, 100.f),
@@ -208,6 +209,7 @@ Test(control, killing_grounded_entity_does_not_crash) {
 
     world.deltaTime = 1.f;
     world.create().set(
+        IsGround{},
         RigidBody::RIGID,
         Size{100.f, 20.f},
         Position(0.f, 100.f),
@@ -226,4 +228,63 @@ Test(control, killing_grounded_entity_does_not_crash) {
 
     world.kill(entity);
     cr_assert(!world.isAlive(entity));
+}
+
+Test(control, ground_sensor_ignores_non_ground_collisions) {
+    ecs::World world;
+    world.plugin<ControlPlugin>();
+
+    world.deltaTime = 1.f;
+    world.create().set(
+        RigidBody::RIGID,
+        Size{100.f, 20.f},
+        Position(0.f, 100.f),
+        Velocity(0.f, 0.f)
+    );
+    const ecs::Entity entity = world.create().set(
+        GroundSensorComponent{},
+        RigidBody::RIGID,
+        Size{10.f, 10.f},
+        Position(10.f, 0.f),
+        Velocity(0.f, 120.f)
+    ).entity();
+
+    world.progress();
+
+    cr_assert(!world.has<IsOnGround>(entity));
+    cr_assert_eq(world.get<GroundSensorComponent>(entity)->contacts, 0);
+}
+
+Test(control, ground_sensor_tracks_multiple_ground_contacts) {
+    ecs::World world;
+    world.plugin<ControlPlugin>();
+
+    const ecs::Entity entity = world.create().set(GroundSensorComponent{}).entity();
+    const ecs::Entity ground_a = world.create().set(IsGround{}).entity();
+    const ecs::Entity ground_b = world.create().set(IsGround{}).entity();
+    const ecs::Entity wall = world.create().entity();
+
+    world.emit(entity, CollisionStart{ground_a});
+    cr_assert(world.has<IsOnGround>(entity));
+    cr_assert_eq(world.get<GroundSensorComponent>(entity)->contacts, 1);
+
+    world.emit(entity, CollisionStart{wall});
+    cr_assert(world.has<IsOnGround>(entity));
+    cr_assert_eq(world.get<GroundSensorComponent>(entity)->contacts, 1);
+
+    world.emit(entity, CollisionStart{ground_b});
+    cr_assert(world.has<IsOnGround>(entity));
+    cr_assert_eq(world.get<GroundSensorComponent>(entity)->contacts, 2);
+
+    world.emit(entity, CollisionEnd{ground_a});
+    cr_assert(world.has<IsOnGround>(entity));
+    cr_assert_eq(world.get<GroundSensorComponent>(entity)->contacts, 1);
+
+    world.emit(entity, CollisionEnd{wall});
+    cr_assert(world.has<IsOnGround>(entity));
+    cr_assert_eq(world.get<GroundSensorComponent>(entity)->contacts, 1);
+
+    world.emit(entity, CollisionEnd{ground_b});
+    cr_assert(!world.has<IsOnGround>(entity));
+    cr_assert_eq(world.get<GroundSensorComponent>(entity)->contacts, 0);
 }

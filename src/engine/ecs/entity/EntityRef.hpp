@@ -24,6 +24,8 @@ namespace ecs {
         template<typename... Components>
         EntityRef &&set(Components... value);
 
+        [[nodiscard]] EntityRef clone() const;
+
         [[nodiscard]] EntityRef child() const;
 
         void childOf(Entity entity) const;

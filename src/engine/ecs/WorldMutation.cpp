@@ -1,6 +1,7 @@
 #include "World.hpp"
 
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace {
@@ -12,7 +13,15 @@ namespace {
 #ifndef NDEBUG
     void validate_component_registered(const ecs::World &world, const ecs::ComponentID cid) {
         if (!world.component_registry.isRegistered(cid)) {
-            throw std::logic_error("component not registered");
+            std::string message = "component not registered: id=" + std::to_string(cid);
+            if (cid < world.component_registry.components.size()) {
+                const auto *name = world.component_registry.components[cid].name;
+                if (name != nullptr) {
+                    message += ", name=";
+                    message += name;
+                }
+            }
+            throw std::logic_error(message);
         }
     }
 #endif

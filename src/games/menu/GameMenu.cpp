@@ -202,3 +202,7 @@ extern "C" IGameModule *load() {
 extern "C" void unload(const IGameModule *game) {
     delete game;
 }
+
+extern "C" {
+LibType LIB_TYPE = GAME;
+}

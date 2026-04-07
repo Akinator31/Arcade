@@ -8,17 +8,17 @@ struct Enemy;
 
 LibType LIB_TYPE = GAME;
 
-enum Texture {
+enum class Texture {
     PACMAN,
     START_BUTTON,
     START_BUTTON_HOVER
 };
 
 SYSTEM(PlayerSys, ecs::EntityRef, On<Add>) {
-    explicit PlayerSys(ecs::World& world) : EntityRef(
+    explicit PlayerSys(ecs::World &world) : EntityRef(
         world.create().set(Position{0, 1500}, Size{100, 100}, Velocity{350, 0}, Color::white(),
                            Gravity{1100}, RigidBody::RIGID, GroundSensorComponent{})) {
-        listen<CollisionStart>([](ecs::World& world, Entity entity, CollisionStart event) {
+        listen<CollisionStart>([](ecs::World &world, Entity entity, CollisionStart event) {
             if (world.has<Enemy>(event.target)) {
                 world.kill(entity);
             }
@@ -32,10 +32,10 @@ SYSTEM(PlayerSys, ecs::EntityRef, On<Add>) {
     }
 };
 
-extern "C" IGameModule* load() {
-    return reinterpret_cast<IGameModule*>(new Engine(
-        "Example", [](Engine& engine, [[maybe_unused]] IDisplayModule* api) {
-            ecs::World& world = engine.scene<DefaultScene>();
+extern "C" IGameModule *load() {
+    return reinterpret_cast<IGameModule *>(new Engine(
+        "Example", [](Engine &engine, [[maybe_unused]] IDisplayModule *api) {
+            ecs::World &world = engine.scene<DefaultScene>();
             engine.setScene<DefaultScene>();
             world.plugin<DefaultPlugin>();
             world.registerComponent<Enemy>();
@@ -49,6 +49,6 @@ extern "C" IGameModule* load() {
         }));
 }
 
-extern "C" void unload(const IGameModule* game) {
+extern "C" void unload(const IGameModule *game) {
     delete game;
 }

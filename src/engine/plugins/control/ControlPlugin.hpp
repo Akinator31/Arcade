@@ -6,6 +6,42 @@
 struct IsOnGround {
 };
 
+struct IsGround {
+};
+
+struct CharacterController : Required<Velocity> {
+    KeyboardCode left = ArrowLeft;
+    KeyboardCode right = ArrowRight;
+    KeyboardCode up = ArrowUp;
+    KeyboardCode down = ArrowDown;
+    float speed = 300.f;
+};
+
+SYSTEM(CharacterControllerSys, With<CharacterController, Velocity>, On<Update>) {
+    ITER(view) {
+        if (view.world.api == nullptr) {
+            return;
+        }
+
+        const auto *controllers = view.column<CharacterController>();
+        auto *velocities = view.column<Velocity>();
+
+        for (uint32_t i = 0; i < view.count(); i += 1) {
+            const CharacterController &controller = controllers[i];
+
+            const float horizontal =
+                    static_cast<float>(view.world.api->isKeyPressed(controller.right)) -
+                    static_cast<float>(view.world.api->isKeyPressed(controller.left));
+            const float vertical =
+                    static_cast<float>(view.world.api->isKeyPressed(controller.down)) -
+                    static_cast<float>(view.world.api->isKeyPressed(controller.up));
+
+            velocities[i].x = horizontal * controller.speed;
+            velocities[i].y = vertical * controller.speed;
+        }
+    }
+};
+
 struct GroundSensorComponent : Required<EmitCollisionEvent> {
     uint32_t contacts = 0;
     EventListenerId collision_start_listener = 0;
@@ -23,20 +59,30 @@ struct GroundSensorComponent : Required<EmitCollisionEvent> {
 
         sensor.collision_start_listener = world.listen<CollisionStart>(
             entity,
-            [](ecs::World &world_ref, const ecs::Entity self, const CollisionStart &) {
+            [](ecs::World &world_ref, const ecs::Entity self, const CollisionStart evt) {
+                if (!world_ref.has<IsGround>(evt.target)) {
+                    return;
+                }
+
                 auto *ground_sensor = world_ref.get<GroundSensorComponent>(self);
                 if (ground_sensor == nullptr) {
                     return;
                 }
 
                 ground_sensor->contacts += 1;
-                world_ref.add<IsOnGround>(self);
+                if (!world_ref.has<IsOnGround>(self)) {
+                    world_ref.add<IsOnGround>(self);
+                }
             }
         );
 
         sensor.collision_end_listener = world.listen<CollisionEnd>(
             entity,
-            [](ecs::World &world_ref, const ecs::Entity self, const CollisionEnd &) {
+            [](ecs::World &world_ref, const ecs::Entity self, const CollisionEnd evt) {
+                if (!world_ref.has<IsGround>(evt.target)) {
+                    return;
+                }
+
                 auto *ground_sensor = world_ref.get<GroundSensorComponent>(self);
                 if (ground_sensor == nullptr) {
                     return;
@@ -52,7 +98,12 @@ struct GroundSensorComponent : Required<EmitCollisionEvent> {
         );
     }
 
-    static void onAdd(ecs::World &, const ecs::Entity) {
+    static void onAdd(ecs::World &world, const ecs::Entity entity) {
+        auto *sensor = world.get<GroundSensorComponent>(entity);
+        if (sensor == nullptr) {
+            return;
+        }
+        installListeners(world, entity, *sensor);
     }
 
     static void onSet(ecs::World &world, const ecs::Entity entity, const GroundSensorComponent *) {
@@ -82,9 +133,13 @@ struct ControlPlugin {
     void load(ecs::World &world) {
         world.plugin<PhysicsPlugin>();
         world.registerComponent<IsOnGround>();
+        world.registerComponent<IsGround>();
+        world.registerComponent<CharacterController>();
         world.registerComponent<GroundSensorComponent>();
+        world.system<CharacterControllerSys>();
     }
 
-    void unload(ecs::World &) {
+    void unload(ecs::World &world) {
+        world.remove<CharacterControllerSys>();
     }
 };

@@ -28,20 +28,14 @@ set(ARCADE_SANITIZER_COMPILE_OPTIONS "")
 set(ARCADE_SANITIZER_LINK_OPTIONS "")
 
 if (ENABLE_SANITIZERS)
-    list(APPEND ARCADE_SANITIZER_COMPILE_OPTIONS
-            -fsanitize=address,undefined
-            -fno-omit-frame-pointer
-            -g3
-            -O0
-    )
-    list(APPEND ARCADE_SANITIZER_LINK_OPTIONS -fsanitize=address,undefined)
+
 endif ()
 
 file(GLOB_RECURSE ECS_SRC CONFIGURE_DEPENDS "src/engine/*.cpp")
 file(GLOB_RECURSE TEST_SRC CONFIGURE_DEPENDS "tests/*.cpp")
 
 add_library(arcade_shared INTERFACE)
-target_include_directories(arcade_shared INTERFACE src)  # garde src/ pour le reste
+target_include_directories(arcade_shared INTERFACE src)
 
 file(GLOB_RECURSE ALL_ENGINE_HEADERS CONFIGURE_DEPENDS "src/engine/*.hpp")
 add_library(arcade_engine_headers INTERFACE)
@@ -59,6 +53,9 @@ endif ()
 
 if (BUILD_PLATFORM_LIBS)
     find_package(SFML 3 REQUIRED COMPONENTS System Window Graphics)
+    find_package(SDL2 REQUIRED)
+    find_package(SDL2_image REQUIRED)
+    find_package(SDL2_ttf REQUIRED)
 
     add_library(sfml_api SHARED
             src/graphics/sfml/SfmlApi.cpp
@@ -71,6 +68,27 @@ if (BUILD_PLATFORM_LIBS)
     set_target_properties(sfml_api PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
             OUTPUT_NAME arcade_sfml
+            PREFIX ""
+    )
+
+    add_library(sdl_api SHARED
+            src/graphics/sdl/SdlApi.cpp
+            src/graphics/sdl/SdlApi.hpp
+    )
+    target_include_directories(sdl_api PRIVATE src/graphics/sdl)
+    target_link_libraries(sdl_api PRIVATE
+            arcade_shared
+            arcade_shared_iface
+            SDL2::SDL2
+            SDL2::SDL2main
+            SDL2_image::SDL2_image
+            SDL2_ttf::SDL2_ttf
+    )
+    target_compile_options(sdl_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    target_link_options(sdl_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+    set_target_properties(sdl_api PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+            OUTPUT_NAME arcade_sdl
             PREFIX ""
     )
 endif ()

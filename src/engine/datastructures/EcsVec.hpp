@@ -23,6 +23,9 @@ namespace datastructures {
             ::free(static_cast<void *>(this->data));
         }
 
+        EcsVec(const EcsVec &) = delete;
+        EcsVec &operator=(const EcsVec &) = delete;
+
         EcsVec(EcsVec &&other) noexcept : data(other.data), size(other.size), capacity(other.capacity) {
             other.data = nullptr;
             other.size = 0;

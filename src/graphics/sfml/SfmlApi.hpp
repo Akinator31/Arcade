@@ -4,7 +4,19 @@
 
 #include <SFML/Graphics.hpp>
 
-using ResourceRecord = std::variant<sf::Font, sf::Texture>;
+
+struct ResourceRecord {
+    sf::Font f = {};
+    sf::Texture t = {};
+
+    static ResourceRecord font(const sf::Font &f) {
+        return {f, {}};
+    }
+
+    static ResourceRecord texture(const sf::Texture &t) {
+        return {{}, t};
+    }
+};
 
 class SfmlGraphicsApi : public IDisplayModule {
     sf::RenderWindow window;
@@ -12,7 +24,7 @@ class SfmlGraphicsApi : public IDisplayModule {
     sf::Sprite sprite;
     sf::Texture defaultTexture;
     sf::Font defaultFont;
-    std::vector<ResourceRecord> _resources;
+    std::vector<ResourceRecord> _resources = {};
     mutable sf::Text textShape;
     sf::Clock clock;
     float deltaTime = 0.f;
@@ -22,7 +34,8 @@ class SfmlGraphicsApi : public IDisplayModule {
 
 public:
     SfmlGraphicsApi() : rectShape({0, 0}), sprite(defaultTexture), textShape(defaultFont),
-                        clearColor(Color{0, 0, 0, 255}) {}
+                        clearColor(Color{0, 0, 0, 255}) {
+    }
 
     void init() override;
 
@@ -40,7 +53,7 @@ public:
 
     bool isKeyPressed(KeyboardCode code) override;
 
-    void loadResources(const std::vector<Resource>& resources) override;
+    void loadResources(const std::vector<Resource> &resources) override;
 
     IVec2 getMousePosition() const override;
 
@@ -54,9 +67,9 @@ public:
                          float outlineThickness) override;
 
 
-    void drawSprite(GlobalPosition pos, const Sprite& spr) override;
+    void drawSprite(GlobalPosition pos, const Sprite &spr) override;
 
-    void drawText(GlobalPosition pos, ResourceIndex handle, const char* str, Color color, uint32_t fontSize) override;
+    void drawText(GlobalPosition pos, ResourceIndex handle, const char *str, Color color, uint32_t fontSize) override;
 
     void setClearColor(Color color) override;
 };
