@@ -11,7 +11,7 @@ using TileMapGrid = std::vector<std::string>;
 
 struct TileMapOptions {
     std::string_view map;
-    char wall = '#';
+    char tile = '#';
 };
 
 struct TileMapPlugin {
@@ -46,29 +46,24 @@ struct TileMapPlugin {
         return rows;
     }
 
-    static bool isWall(const TileMapGrid &map, const int x, const int y, const char wall) {
+    static bool isTile(const TileMapGrid &map, const int x, const int y, const char tile) {
         return y >= 0 && y < static_cast<int>(map.size()) &&
                x >= 0 && x < static_cast<int>(map[y].size()) &&
-               map[y][x] == wall;
+               map[y][x] == tile;
     }
 
-    static void spawnWall(const ecs::EntityRef &base,
+    static void spawnTile(const ecs::EntityRef &base,
                           const Position base_position,
                           const Size base_size,
                           const int x,
-                          const int y,
-                          const int width,
-                          const int height) {
-        auto wall = base.clone();
-        wall.set(
+                          const int y) {
+        auto tile = base.clone();
+        tile.set(
             Position{
                 base_position.x + static_cast<float>(x) * base_size.width,
                 base_position.y + static_cast<float>(y) * base_size.height
             },
-            Size{
-                static_cast<float>(width) * base_size.width,
-                static_cast<float>(height) * base_size.height
-            }
+            base_size
         );
     }
 
@@ -87,40 +82,12 @@ struct TileMapPlugin {
             return;
         }
 
-        std::vector visited(map.size(), std::vector<bool>(map.front().size(), false));
-
         for (int y = 0; y < static_cast<int>(map.size()); y += 1) {
             for (int x = 0; x < static_cast<int>(map[y].size()); x += 1) {
-                if (!isWall(map, x, y, options.wall) || visited[y][x]) {
+                if (!isTile(map, x, y, options.tile)) {
                     continue;
                 }
-
-                int width = 1;
-                while (isWall(map, x + width, y, options.wall) && !visited[y][x + width]) {
-                    width += 1;
-                }
-
-                int height = 1;
-                bool can_extend = true;
-                while (can_extend && y + height < static_cast<int>(map.size())) {
-                    for (int dx = 0; dx < width; dx += 1) {
-                        if (!isWall(map, x + dx, y + height, options.wall) || visited[y + height][x + dx]) {
-                            can_extend = false;
-                            break;
-                        }
-                    }
-                    if (can_extend) {
-                        height += 1;
-                    }
-                }
-
-                for (int dy = 0; dy < height; dy += 1) {
-                    for (int dx = 0; dx < width; dx += 1) {
-                        visited[y + dy][x + dx] = true;
-                    }
-                }
-
-                spawnWall(base, origin, tile_size, x, y, width, height);
+                spawnTile(base, origin, tile_size, x, y);
             }
         }
 

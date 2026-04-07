@@ -2,7 +2,6 @@
 
 #include "engine/ecs/World.hpp"
 #include "engine/plugins/render/CameraPlugin/CameraPlugin.hpp"
-#include "engine/plugins/render/PositionPropagationPlugin/PositionPropagationPlugin.hpp"
 #include "engine/plugins/render/UiPlugin/UiPlugin.hpp"
 
 template<class Fn>

@@ -35,6 +35,5 @@ struct MenuScenePlugin {
     }
 
     void unload(ecs::World &) {
-        // le world fait déjà un le unload ???
     }
 };
