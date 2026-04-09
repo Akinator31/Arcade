@@ -79,6 +79,7 @@ void NcursesGraphicsApi::init() {
     keypad(stdscr, TRUE);
     curs_set(0);
     nodelay(stdscr, TRUE);
+    set_escdelay(25);
     start_color();
     use_default_colors();
     mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, nullptr);
@@ -116,6 +117,10 @@ void NcursesGraphicsApi::beginFrame() {
                     mousePressed = false;
                     mouseReleasedThisFrame = true;
                 }
+                if (event.bstate & BUTTON1_CLICKED) {
+                    mouseReleasedThisFrame = true;
+                    mousePressed = false;
+                }
             }
             continue;
         }
@@ -128,8 +133,6 @@ void NcursesGraphicsApi::beginFrame() {
         KeyboardCode code = ncursesToKeyboardCode(ch);
         if (code != None)
             pressedKeys.insert(static_cast<int>(code));
-        if (code == Escape)
-            windowOpen = false;
     }
 
     short bgPair = getColorPair(clearColor, clearColor);
@@ -155,8 +158,8 @@ bool NcursesGraphicsApi::isKeyPressed(KeyboardCode code) {
 
 IVec2 NcursesGraphicsApi::getMousePosition() const {
     return {
-        static_cast<int>(invScaleX(static_cast<float>(mousePos.x))),
-        static_cast<int>(invScaleY(static_cast<float>(mousePos.y)))
+        static_cast<int>(invScaleX(static_cast<float>(mousePos.x) + 0.5f)),
+        static_cast<int>(invScaleY(static_cast<float>(mousePos.y) + 0.5f))
     };
 }
 
@@ -237,7 +240,7 @@ void NcursesGraphicsApi::drawText(GlobalPosition pos,
               const char* str,
               Color color,
               uint32_t) {
-    short pair = getColorPair(color, Color{0, 0, 0, 255});
+    short pair = getColorPair(color, clearColor);
     attron(COLOR_PAIR(pair));
     mvprintw(static_cast<int>(scaleY(pos.y)), static_cast<int>(scaleX(pos.x)), "%s", str);
     attroff(COLOR_PAIR(pair));
