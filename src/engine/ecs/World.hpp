@@ -317,6 +317,15 @@ namespace ecs {
         }
 
         template<typename T>
+        Entity firstRelated(const Entity target) {
+            for (const auto &[parent, entity]: this->iterRelated<T>(target)) {
+                (void) parent;
+                return entity;
+            }
+            return {};
+        }
+
+        template<typename T>
         void unrelate(const Entity source) {
             using Target = RelationTarget<T>;
 
@@ -519,6 +528,18 @@ namespace ecs {
             cached.required<Components...>();
             this->updateMatches(cached);
             return OwnedTablesReader(std::move(cached), *this);
+        }
+
+        template<typename... Components, typename Func>
+        bool any(Func &&func) {
+            bool found = false;
+            this->fetch<Components...>().iter([&](ArchetypeView &view) {
+                if (found) {
+                    return;
+                }
+                func(view, found);
+            });
+            return found;
         }
 
         TablesReader read(QueryID qid);

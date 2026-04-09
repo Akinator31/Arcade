@@ -140,10 +140,6 @@ void SdlGraphicsApi::beginFrame() {
             this->shutdown();
             return;
         }
-        if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
-            this->shutdown();
-            return;
-        }
         if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT) {
             this->mouseReleasedThisFrame = true;
         }

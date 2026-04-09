@@ -102,21 +102,6 @@ if (BUILD_CORE_PROGRAM)
 endif ()
 
 if (BUILD_GAMES)
-    add_library(game_example SHARED
-            src/games/example/ExampleGame.cpp
-            src/games/example/ExampleGame.hpp
-    )
-    target_sources(game_example PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
-    target_include_directories(game_example PRIVATE src src/games/example)
-    target_link_libraries(game_example PRIVATE arcade_shared arcade_shared_iface arcade_engine_headers)
-    target_compile_options(game_example PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
-    target_link_options(game_example PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
-    set_target_properties(game_example PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-            OUTPUT_NAME arcade_game_example
-            PREFIX ""
-    )
-
     add_library(game_menu SHARED
             src/games/menu/GameMenu.cpp
             src/games/menu/GameMenu.hpp
@@ -143,6 +128,21 @@ if (BUILD_GAMES)
     set_target_properties(pacman_game PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
             OUTPUT_NAME arcade_game_pacman
+            PREFIX ""
+    )
+
+    add_library(snake_game SHARED
+            src/games/snake/Snake.cpp
+            src/games/snake/SnakeGameplayPlugin.hpp
+    )
+    target_sources(snake_game PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
+    target_include_directories(snake_game PRIVATE src src/games/snake)
+    target_link_libraries(snake_game PRIVATE arcade_shared arcade_shared_iface)
+    target_compile_options(snake_game PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    target_link_options(snake_game PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+    set_target_properties(snake_game PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+            OUTPUT_NAME arcade_game_snake
             PREFIX ""
     )
 endif ()

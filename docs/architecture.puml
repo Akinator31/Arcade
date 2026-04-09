@@ -1,0 +1,221 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+title Arcade - Core / Graphics / LECS
+
+package "Core" {
+  class Main {
+    +main(argc, argv)
+  }
+
+  class "DynamicLoader<Members...>" as DynamicLoader {
+    -lib : void*
+    +call<MemberType>(...)
+  }
+
+  class GameLoader
+  class GraphicsApiLoader
+
+  interface IGameModule {
+    +getResources() : vector<Resource>
+    +getName() : string
+    +update(api : IDisplayModule*)
+    +consumeCoreAction() : optional<CoreAction>
+  }
+
+  interface IDisplayModule {
+    +init()
+    +shutdown()
+    +isWindowOpen() : bool
+    +beginFrame()
+    +endFrame()
+    +setWindowSize(rect : USize)
+    +getWindowSize() : USize
+    +isKeyPressed(code : KeyboardCode) : bool
+    +drawSprite(pos : GlobalPosition, spr : Sprite)
+    +drawText(pos : GlobalPosition, handle : ResourceIndex, str : const char*, color : Color, fontSize : uint32_t)
+    +getMousePosition() : IVec2
+    +isMouseButtonPressed(button : int) : bool
+    +wasMouseButtonReleased(button : int) : bool
+    +drawRect(pos : GlobalPosition, size : Size, color : Color)
+    +drawRectOutline(pos : GlobalPosition, size : Size, fillColor : Color, outlineColor : Color, thickness : float)
+    +loadResources(resources : vector<Resource>)
+    +setClearColor(color : Color)
+  }
+}
+
+package "Engine" {
+  class Engine {
+    -scenes : SparseSet<ecs::World*>
+    -currentScene : ecs::World*
+    -name : string
+    -lastFrameTime
+    -hasRenderedFrame : bool
+    -_resources : vector<Resource>
+    -init : function<void(Engine&, IDisplayModule*)>
+    +pendingActions : deque<CoreAction>
+    +scene<Scene>() : ecs::World&
+    +setScene<Scene>()
+    +progress()
+    +getName() : string
+    +update(api : IDisplayModule*)
+    +getResources() : vector<Resource>
+    +consumeCoreAction() : optional<CoreAction>
+  }
+}
+
+package "Graphics" {
+  class SfmlGraphicsApi
+  class SdlGraphicsApi
+}
+
+package "Games" {
+  class "Menu Game" as MenuGame
+  class "Snake Game" as SnakeGame
+  class "Pacman Game" as PacmanGame
+}
+
+package "LECS" {
+  class "ecs::World" as World {
+    +api : IDisplayModule*
+    +deltaTime : float
+    +queries : vector<QueryCache>
+    +entity_registry : EntityRegistry
+    +component_registry : ComponentRegistry
+    +archetype_registry : ArchetypeRegistry
+    +plugin<T>()
+    +removePlugin<T>()
+    +create() : EntityRef
+    +kill(entity)
+    +get<T>(entity) : T*
+    +set<T>(entity, value)
+    +remove<T>(entity)
+    +progress()
+    +flush()
+    +command(fn)
+  }
+
+  class Query {
+    -_required : EntityType
+    -_excluded : EntityType
+    +required<Components...>()
+    +excluded<Components...>()
+    +matchTable(table) : bool
+  }
+
+  class QueryCache {
+    +on_add
+    +matches : EcsVec<ArchetypeID>
+    +update(world, archetype, id)
+  }
+
+  class ArchetypeView {
+    +world : ecs::World&
+    +count() : uint32_t
+    +entity(index) : Entity
+    +column<T>() : T*
+    +optional<T>() : T*
+    +has<T>() : bool
+  }
+
+  class "ecs::EntityRef" as EntityRef {
+    +world : World&
+    +add<Components...>()
+    +set<Components...>(...)
+    +clone() : EntityRef
+    +child() : EntityRef
+    +relate<Relation>(target)
+    +get<T>() : T*
+  }
+
+  interface "Plugin concept" as PluginConcept {
+    +load(world : ecs::World&)
+    +unload(world : ecs::World&)
+  }
+
+  class PluginRecord {
+    +instance : void*
+    +unload(ptr, world)
+    +destroy(ptr)
+  }
+
+  class "SystemRegistered" as SystemRegistered {
+    +id : uint32_t
+    +qid : QueryID
+    +iter(view : ArchetypeView&)
+    +run(value, world)
+    +destroy(value)
+    +condition(world) : bool
+  }
+
+  class Phase
+  class PhaseContainer
+
+  class DefaultPlugin
+  class MenuScenePlugin
+  class RenderPlugin
+  class PositionPropagationPlugin
+  class PhysicsPlugin
+  class ControlPlugin
+  class UiPlugin
+  class SpritePlugin
+  class TileMapPlugin
+}
+
+Main --> GraphicsApiLoader : load graphics
+Main --> GameLoader : load game
+Main --> IDisplayModule : use
+Main --> IGameModule : use
+
+GameLoader --|> DynamicLoader
+GraphicsApiLoader --|> DynamicLoader
+
+Engine ..|> IGameModule
+SfmlGraphicsApi ..|> IDisplayModule
+SdlGraphicsApi ..|> IDisplayModule
+
+MenuGame ..> Engine : load()/unload()
+SnakeGame ..> Engine : load()/unload()
+PacmanGame ..> Engine : load()/unload()
+
+Engine *-- "0..*" World : scenes
+Engine --> World : currentScene
+Engine --> IDisplayModule : update(api)
+World --> IDisplayModule : api
+
+World --> QueryCache
+QueryCache --|> Query
+World --> EntityRef : create()
+World --> PluginRecord : loaded_plugins
+World --> Phase
+World --> PhaseContainer
+SystemRegistered --> QueryCache : qid
+SystemRegistered --> ArchetypeView : iter()
+ArchetypeView --> World
+
+DefaultPlugin ..|> PluginConcept
+MenuScenePlugin ..|> PluginConcept
+RenderPlugin ..|> PluginConcept
+PositionPropagationPlugin ..|> PluginConcept
+PhysicsPlugin ..|> PluginConcept
+ControlPlugin ..|> PluginConcept
+UiPlugin ..|> PluginConcept
+SpritePlugin ..|> PluginConcept
+TileMapPlugin ..|> PluginConcept
+
+DefaultPlugin --> World : plugin<...>()
+MenuScenePlugin --> World : plugin<...>()
+
+note right of Engine
+Each game dynamic library exposes
+load()/unload() and returns an Engine
+through IGameModule.
+end note
+
+note right of World
+LECS core:
+entities, components, archetypes,
+queries, systems, plugins and events.
+end note
+
+@enduml

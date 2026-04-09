@@ -26,11 +26,6 @@ void SfmlGraphicsApi::beginFrame() {
         if (event->is<sf::Event::Closed>()) {
             window.close();
         }
-        
-        if (const auto *keyPressed = event->getIf<sf::Event::KeyPressed>()) {
-            if (keyPressed->scancode == sf::Keyboard::Scancode::Escape)
-                window.close();
-        }
 
         if (event->is<sf::Event::MouseButtonReleased>()) {
             this->mouseReleasedThisFrame = true;
@@ -40,7 +35,6 @@ void SfmlGraphicsApi::beginFrame() {
             window.setView(v);
         }
     }
-
 
     this->window.clear({this->clearColor.r, this->clearColor.g, this->clearColor.b, this->clearColor.a});
     this->deltaTime = this->clock.restart().asSeconds();
@@ -99,6 +93,9 @@ bool SfmlGraphicsApi::isKeyPressed(const KeyboardCode code) {
             break;
         case Enter:
             sfmlCode = sf::Keyboard::Key::Enter;
+            break;
+        case Escape:
+            sfmlCode = sf::Keyboard::Key::Escape;
             break;
         case ArrowRight:
             sfmlCode = sf::Keyboard::Key::Right;
