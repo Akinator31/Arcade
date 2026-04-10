@@ -23,8 +23,14 @@ int main(const int argc, char **argv) {
 
     while (api->isWindowOpen() && !shouldQuit) {
         api->beginFrame();
-
         game->update(api);
+
+        if (api->isKeyPressed(KeyboardCode::M)) {
+            game_loader->call<UnloadGame>(game);
+            game_loader = std::make_unique<GameLoader>("lib/arcade_game_menu.so");
+            game = game_loader->call<LoadGame>();
+            api->loadResources(game->getResources());
+        }
 
         if (auto action = game->consumeCoreAction(); action.has_value()) {
             switch (action->type) {

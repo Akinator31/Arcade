@@ -1,5 +1,6 @@
 #include "GameMenu.hpp"
 #include <algorithm>
+#include <dlfcn.h>
 #include <deque>
 #include <filesystem>
 #include <string>
@@ -10,13 +11,24 @@
 #include "plugins/render/UiPlugin/UiPrefabs.hpp"
 
 namespace {
-    constexpr std::string_view LIB_DIR = "./cmake-build-debug/lib"; // Merci clion
+    constexpr std::string_view LIB_DIR = "./lib"; // Merci clion
 
     struct SelectableLib {
         std::string path;
         std::string label;
     };
 
+    LibType getLibType(const std::string &path) {
+        void *handle = dlopen(path.c_str(), RTLD_LAZY);
+        if (!handle) {
+            return GAME;  // Retourner une valeur par défaut en cas d'erreur
+        }
+
+        LibType *libType = static_cast<LibType*>(dlsym(handle, "LIB_TYPE"));
+        LibType result = libType ? *libType : GAME;
+        dlclose(handle);
+        return result;
+    }
 
     std::string makeDisplayName(std::string filename, const std::string_view prefix) {
         filename.erase(0, prefix.size());
@@ -34,7 +46,7 @@ namespace {
 
         for (std::filesystem::directory_iterator it(LIB_DIR, ec); const auto &entry: it) {
             if (const std::string &path = entry.path().string();
-                path.ends_with(".so") && entry.path().filename().string().starts_with(prefix)) {
+                path.ends_with(".so")) {
                 libs.push_back(SelectableLib{
                     .path = path,
                     .label = makeDisplayName(entry.path().filename().string(), prefix)
@@ -96,8 +108,7 @@ void mainMenuEntities(ecs::World &world) {
 }
 
 void selectorEntities(ecs::World &world) {
-    const std::vector<SelectableLib> graphicsLibs = scanByPrefix("arcade_");
-    const std::vector<SelectableLib> gameLibs = scanByPrefix("arcade_game_");
+    const std::vector<SelectableLib> allLibs = scanByPrefix("arcade_");
 
     world.create().set(
         Position{680, 20},
@@ -117,27 +128,40 @@ void selectorEntities(ecs::World &world) {
     constexpr float baseY = 180.f;
     constexpr float stepY = 165.f;
 
-    int row = 0;
-    for (const auto &[path, label]: graphicsLibs) {
-        if (path.find("arcade_game_") != std::string::npos) {
-            continue;
+    int graphicsRow = 0;
+    int gameRow = 0;
+
+    for (const auto &[path, label]: allLibs) {
+        LibType type = getLibType(path);
+
+        if (type == GRAPHIC) {
+            world.create<Button>({
+                .pos = {120, baseY + static_cast<float>(graphicsRow) * stepY},
+                .scale = listScale,
+                .animated = true
+            }).listen<ClickedEvent>([path](ecs::World &world, ecs::Entity, const ClickedEvent &) {
+                world.singleton_get<Engine>()->pendingActions.push_back(CoreAction{
+                    .type = CoreActionType::SwitchGraphics,
+                    .target = path
+                });
+            }).child().set(Text(MENU_FONT, strdup(label.c_str()), Color{40, 24, 16, 255}, 36), Position{25, 34});
+            graphicsRow += 1;
+        } else if (type == GAME && label != "menu") {
+            world.create<Button>({
+                .pos = {1060, baseY + static_cast<float>(gameRow) * stepY},
+                .scale = listScale,
+                .animated = true
+            }).listen<ClickedEvent>([path](ecs::World &world, ecs::Entity, const ClickedEvent &) {
+                world.singleton_get<Engine>()->pendingActions.push_back(CoreAction{
+                    .type = CoreActionType::SwitchGame,
+                    .target = path
+                });
+            }).child().set(Text{MENU_FONT, strdup(label.c_str()), Color{40, 24, 16, 255}, 36}, Position{25, 34});
+            gameRow += 1;
         }
-
-        world.create<Button>({
-            .pos = {120, baseY + static_cast<float>(row) * stepY},
-            .scale = listScale,
-            .animated = true
-        }).listen<ClickedEvent>([path](ecs::World &world, ecs::Entity, const ClickedEvent &) {
-            world.singleton_get<Engine>()->pendingActions.push_back(CoreAction{
-                .type = CoreActionType::SwitchGraphics,
-                .target = path
-            });
-        }).child().set(Text(MENU_FONT, strdup(label.c_str()), Color{40, 24, 16, 255}, 36), Position{25, 34});
-
-        row += 1;
     }
 
-    if (row == 0) {
+    if (graphicsRow == 0) {
         world.create().set(
             Position{120, baseY},
             Size{380, 50},
@@ -145,27 +169,7 @@ void selectorEntities(ecs::World &world) {
         ).child().set(Text(MENU_FONT, strdup("No graphics lib"), Color{40, 24, 16, 255}, 28), Position{20, 9});
     }
 
-    row = 0;
-    for (const auto &[path, label]: gameLibs) {
-        if (path.find("arcade_game_menu.so") != std::string::npos) {
-            continue;
-        }
-
-        world.create<Button>({
-            .pos = {1060, baseY + static_cast<float>(row) * stepY},
-            .scale = listScale,
-            .animated = true
-        }).listen<ClickedEvent>([path](ecs::World &world, ecs::Entity, const ClickedEvent &) {
-            world.singleton_get<Engine>()->pendingActions.push_back(CoreAction{
-                .type = CoreActionType::SwitchGame,
-                .target = path
-            });
-        }).child().set(Text{MENU_FONT, strdup(label.c_str()), Color{40, 24, 16, 255}, 36}, Position{25, 34});
-
-        row += 1;
-    }
-
-    if (row == 0) {
+    if (gameRow == 0) {
         world.create().set(
             Position{1060, baseY},
             Size{380, 50},

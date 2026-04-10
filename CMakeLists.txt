@@ -108,7 +108,7 @@ if (BUILD_GAMES)
     )
     target_sources(game_menu PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
     target_include_directories(game_menu PRIVATE src src/games/menu)
-    target_link_libraries(game_menu PRIVATE arcade_shared arcade_shared_iface arcade_engine_headers)
+    target_link_libraries(game_menu PRIVATE arcade_shared arcade_shared_iface arcade_engine_headers ${CMAKE_DL_LIBS})
     target_compile_options(game_menu PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
     target_link_options(game_menu PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
     set_target_properties(game_menu PROPERTIES
