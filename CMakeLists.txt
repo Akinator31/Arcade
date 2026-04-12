@@ -56,6 +56,7 @@ if (BUILD_PLATFORM_LIBS)
   find_package(SDL2 REQUIRED)
   find_package(SDL2_image REQUIRED)
   find_package(SDL2_ttf REQUIRED)
+  find_package(Curses REQUIRED)
 
   add_library(sfml_api SHARED
             src/graphics/sfml/SfmlApi.cpp
@@ -96,10 +97,11 @@ if (BUILD_PLATFORM_LIBS)
             src/graphics/ncurses/NcursesApi.cpp
             src/graphics/ncurses/NcursesApi.hpp
     )
-  target_include_directories(ncurses_api PRIVATE src/graphics/ncurses)
+  target_include_directories(ncurses_api PRIVATE src/graphics/ncurses ${CURSES_INCLUDE_DIRS})
   target_link_libraries(ncurses_api PRIVATE
             arcade_shared
             arcade_shared_iface
+            ${CURSES_LIBRARIES}
     )
   target_compile_options(ncurses_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
   target_link_options(ncurses_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
