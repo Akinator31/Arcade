@@ -21,6 +21,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             cmake g++ build-essential libcriterion-dev \
+            libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev \
+            libncurses-dev \
             libx11-dev libxrandr-dev libudev-dev \
             libxcursor-dev libxi-dev libxinerama-dev \
             libgl-dev libegl-dev libopengl-dev \
