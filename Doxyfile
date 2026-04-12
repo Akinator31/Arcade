@@ -1,10 +1,13 @@
 PROJECT_NAME           = "Arcade"
-INPUT                  = src/ include/ README.md docs/
+PROJECT_BRIEF          = "Modular arcade launcher with pluggable games and graphics backends"
+INPUT                  = src/ README.md docs/
 EXCLUDE                = docs/doxygen-awesome
 RECURSIVE              = YES
-USE_MDFILE_AS_MAINPAGE = README.md
+USE_MDFILE_AS_MAINPAGE = docs/INDEX.md
 FILE_PATTERNS          = *.cpp *.hpp *.h *.md
 EXTENSION_MAPPING      = md=Markdown
+MARKDOWN_SUPPORT       = YES
+TOC_INCLUDE_HEADINGS   = 4
 
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html

@@ -1,27 +1,29 @@
-# LECS / Engine
+# ECS and Engine Overview
 
-Cette documentation couvre l'API ECS utilisée par `Engine` et `ecs::World` dans ce dépôt.
+This documentation describes the ECS API used by `Engine` and `ecs::World` in this repository.
 
-Guides disponibles :
+## Available guides
 
-- [LECS Quickstart](/home/suleyman/projects/Arcade/docs/LECS_QUICKSTART.md)
-- [LECS Systems](/home/suleyman/projects/Arcade/docs/LECS_SYSTEMS.md)
-- [LECS Plugins](/home/suleyman/projects/Arcade/docs/LECS_PLUGINS.md)
-- [LECS Components](/home/suleyman/projects/Arcade/docs/LECS_COMPONENTS.md)
-- [LECS Component Hooks](/home/suleyman/projects/Arcade/docs/LECS_COMPONENT_HOOKS.md)
-- [LECS Relations, Singletons, State](/home/suleyman/projects/Arcade/docs/LECS_RELATIONS_SINGLETONS_STATE.md)
+- [ECS Quickstart](ECS_QUICKSTART.md)
+- [ECS Systems](ECS_SYSTEMS.md)
+- [ECS Plugins](ECS_PLUGINS.md)
+- [ECS Components](ECS_COMPONENTS.md)
+- [ECS Component Hooks](ECS_COMPONENT_HOOKS.md)
+- [ECS Relations, Singletons, State](ECS_RELATIONS_SINGLETONS_STATE.md)
+- [Develop a Game Module](DEVELOP_GAME_MODULE.md)
+- [Develop a Graphics Library](DEVELOP_GRAPHICS_LIBRARY.md)
 
-Ordre recommandé :
+## Recommended reading order
 
-1. lire le quickstart
-2. lire les systems
-3. lire components + hooks
-4. lire plugins
-5. lire relations / singletons / state
+1. Start with [ECS Quickstart](ECS_QUICKSTART.md)
+2. Continue with [ECS Systems](ECS_SYSTEMS.md)
+3. Read [ECS Components](ECS_COMPONENTS.md) and [ECS Component Hooks](ECS_COMPONENT_HOOKS.md)
+4. Read [ECS Plugins](ECS_PLUGINS.md)
+5. Finish with [ECS Relations, Singletons, State](ECS_RELATIONS_SINGLETONS_STATE.md)
 
-Repères dans le code :
+## Code map
 
-- moteur : `src/engine/Engine.hpp`
-- monde ECS : `src/engine/ecs/World.hpp`
-- exemples : `src/games/example/ExampleGame.cpp`
-- tests ECS : `tests/tests_*.cpp`
+- Engine entry point: `src/engine/Engine.hpp`
+- ECS world implementation: `src/engine/ecs/World.hpp`
+- Minimal game example: `src/games/example/ExampleGame.cpp`
+- ECS-focused tests: `tests/tests_*.cpp`
