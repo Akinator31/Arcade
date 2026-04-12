@@ -13,7 +13,7 @@ namespace {
 }
 
 extern "C" IGameModule *load() {
-    auto *engine = new Engine("Snake", [](Engine &engine, IDisplayModule *api) {
+    auto *engine = new Engine("Snake", [](Engine &engine, [[maybe_unused]] IDisplayModule *api) {
         ecs::World &world = engine.scene<SnakeScene>();
 
         engine.setScene<SnakeScene>();
@@ -35,11 +35,13 @@ extern "C" IGameModule *load() {
             .wrap = false
         });
 
-        api->setClearColor({12, 18, 12, 255});
-        api->setWindowSize({1280, 900});
         score_plugin_api::setMessage(world, "ZQSD OR ARROWS", Color{180, 220, 180, 255});
     }, {
         Resource::font("./assets/Fonts/pixellari.ttf")
+    },
+    []([[maybe_unused]] Engine &engine, IDisplayModule *api) {
+        api->setClearColor({12, 18, 12, 255});
+        api->setWindowSize({1280, 900});
     });
 
     return reinterpret_cast<IGameModule *>(engine);

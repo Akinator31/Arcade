@@ -260,7 +260,7 @@ IDisplayModule *load() {
     return new NcursesGraphicsApi();
 }
 
-void unload(const IDisplayModule *api) {
+void unload(IDisplayModule *api) {
     delete api;
 }
 }

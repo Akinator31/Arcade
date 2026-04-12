@@ -45,8 +45,8 @@ class SdlGraphicsApi : public IDisplayModule {
     std::vector<SdlResource> resources;
     bool mouseReleasedThisFrame = false;
     Color clearColor{0, 0, 0, 255};
-    USize logicalSize{1280, 720};
-    USize windowSize{1280, 720};
+    USize logicalSize{1920, 1080};
+    USize windowSize{1920, 1080};
 
 public:
     ~SdlGraphicsApi() override;

@@ -30,7 +30,7 @@ class SfmlGraphicsApi : public IDisplayModule {
     float deltaTime = 0.f;
     bool mouseReleasedThisFrame = false;
     Color clearColor;
-    USize windowSize{};
+    USize windowSize{1920, 1080};
 
 public:
     SfmlGraphicsApi() : rectShape({0, 0}), sprite(defaultTexture), textShape(defaultFont),

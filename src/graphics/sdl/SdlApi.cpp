@@ -359,7 +359,7 @@ extern "C" IDisplayModule *load() {
     return new SdlGraphicsApi();
 }
 
-extern "C" void unload(const IDisplayModule *api) {
+extern "C" void unload(IDisplayModule *api) {
     delete api;
 }
 

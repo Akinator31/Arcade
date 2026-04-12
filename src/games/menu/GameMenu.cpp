@@ -181,15 +181,13 @@ void selectorEntities(ecs::World &world) {
 extern "C" IGameModule *load() {
     auto *engine = new Engine(
         "Example",
-        [](Engine &engine, IDisplayModule *api) {
+        [](Engine &engine, [[maybe_unused]] IDisplayModule *api) {
             ecs::World &world = engine.scene<DefaultScene>();
             ecs::World &selectorWorld = engine.scene<SelectorScene>();
 
             engine.setScene<DefaultScene>();
             world.system<MenuHomeBackgroundSys>();
             selectorWorld.system<MenuSelectorBackgroundSys>();
-            api->setClearColor({255, 172, 104, 255});
-            api->setWindowSize({1920, 1080});
 
             mainMenuEntities(world);
             selectorEntities(selectorWorld);
@@ -199,6 +197,10 @@ extern "C" IGameModule *load() {
             Resource::texture("./assets/Buttons/Large/UI_Wood_Button_Large_Lock_02a3.png"),
             Resource::font("./assets/Fonts/pixellari.ttf"),
             Resource::texture("./assets/Menu/UI_Wood_Banner_02.png")
+        },
+        []([[maybe_unused]] Engine &engine, IDisplayModule *api) {
+            api->setClearColor({255, 172, 104, 255});
+            api->setWindowSize({1920, 1080});
         });
     return reinterpret_cast<IGameModule *>(engine);
 }

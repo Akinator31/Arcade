@@ -54,8 +54,11 @@ public:
     }
 
     ~DynamicLoader() {
-        if (lib != nullptr)
-            ::dlclose(lib);
+        // Intentionally not calling dlclose(lib) here.
+        // Unloading complex graphical libraries (SFML, SDL, ncurses) on Linux
+        // often causes segmentation faults due to dangling signal handlers,
+        // thread-local storage corruption, or improperly destroyed OpenGL contexts.
+        // Keeping them in memory is the standard, safest workaround.
     }
 
     DynamicLoader(const DynamicLoader &) = delete;

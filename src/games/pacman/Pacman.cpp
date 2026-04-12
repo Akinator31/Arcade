@@ -705,7 +705,7 @@ SYSTEM(PacmanLevelSys, On<Update>) {
 };
 
 extern "C" IGameModule *load() {
-    auto *engine = new Engine("Pacman", [](Engine &engine, IDisplayModule *api) {
+    auto *engine = new Engine("Pacman", [](Engine &engine, [[maybe_unused]] IDisplayModule *api) {
         ecs::World &world = engine.scene<DefaultScene>();
 
         engine.setScene<DefaultScene>();
@@ -736,9 +736,6 @@ extern "C" IGameModule *load() {
         world.system<PacmanGhostAiSys>();
         world.system<PacmanEnemyCollisionSys>();
         world.system<PacmanLevelSys>();
-
-        api->setClearColor({0, 0, 0, 255});
-        api->setWindowSize({1280, 900});
 
         auto *state = world.singleton_get<LevelState>();
         spawnLevelTiles(world);
@@ -811,6 +808,10 @@ extern "C" IGameModule *load() {
         resetPlayer(world, player.entity());
     }, {
         Resource::font("./assets/Fonts/pixellari.ttf")
+    },
+    []([[maybe_unused]] Engine &engine, IDisplayModule *api) {
+        api->setClearColor({0, 0, 0, 255});
+        api->setWindowSize({1280, 900});
     });
 
     return reinterpret_cast<IGameModule *>(engine);

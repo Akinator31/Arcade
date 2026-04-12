@@ -46,6 +46,10 @@ extern "C" IGameModule *load() {
             Resource::texture("./assets/pacman.png"),
             Resource::texture("./assets/Start.png"),
             Resource::texture("./assets/StartHover.png")
+        },
+        []([[maybe_unused]] Engine &engine, IDisplayModule *api) {
+            api->setClearColor({0, 0, 0, 255});
+            api->setWindowSize({1920, 1080});
         }));
 }
 

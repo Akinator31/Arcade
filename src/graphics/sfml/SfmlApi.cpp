@@ -165,7 +165,6 @@ void SfmlGraphicsApi::loadResources(const std::vector<Resource> &resources) {
             this->_resources.emplace_back(ResourceRecord::texture(sf::Texture(path)));
         }
         if (type == ResourceType::Font) {
-            std::cout << "load font" << std::endl;
             this->_resources.emplace_back(ResourceRecord::font(sf::Font(path)));
         }
     }
@@ -173,6 +172,7 @@ void SfmlGraphicsApi::loadResources(const std::vector<Resource> &resources) {
 
 void SfmlGraphicsApi::drawText(GlobalPosition pos, const ResourceIndex handle, const char *str, const Color color,
                                const uint32_t fontSize) {
+    if (handle >= this->_resources.size() || !str) return;
     this->textShape.setFont(this->_resources[handle].f);
     this->textShape.setString(str);
     this->textShape.setCharacterSize(fontSize);
@@ -182,6 +182,7 @@ void SfmlGraphicsApi::drawText(GlobalPosition pos, const ResourceIndex handle, c
 }
 
 void SfmlGraphicsApi::drawSprite(const GlobalPosition pos, const Sprite &spr) {
+    if (spr.texture >= this->_resources.size()) return;
     this->sprite.setTexture(this->_resources[spr.texture].t);
     this->sprite.setTextureRect(std::bit_cast<sf::IntRect>(spr.rect));
 
@@ -208,7 +209,7 @@ IDisplayModule *load() {
     return new SfmlGraphicsApi();
 }
 
-void unload(const IDisplayModule *api) {
+void unload(IDisplayModule *api) {
     delete api;
 }
 }

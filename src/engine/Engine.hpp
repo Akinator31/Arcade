@@ -20,7 +20,9 @@ class Engine : IGameModule {
     std::chrono::steady_clock::time_point lastFrameTime = std::chrono::steady_clock::now();
     bool hasRenderedFrame = false;
     std::vector<Resource> _resources;
-    const std::function<void(Engine &, IDisplayModule *)> init;
+    IDisplayModule *lastApi = nullptr;
+    const std::function<void(Engine &, IDisplayModule *)> onStart;
+    const std::function<void(Engine &, IDisplayModule *)> onDisplayUpdate;
 
 public:
     std::deque<CoreAction> pendingActions;
@@ -46,9 +48,11 @@ public:
     }
 
 public:
-    explicit Engine(std::string name, const std::function<void(Engine &, IDisplayModule *)> &init,
-                    const std::vector<Resource> &resources) : name(std::move(name)), _resources(resources),
-                                                              init(init) {
+    explicit Engine(std::string name,
+                    const std::function<void(Engine &, IDisplayModule *)> &onStart,
+                    const std::vector<Resource> &resources,
+                    const std::function<void(Engine &, IDisplayModule *)> &onDisplayUpdate = nullptr)
+        : name(std::move(name)), _resources(resources), onStart(onStart), onDisplayUpdate(onDisplayUpdate) {
     }
 
 
@@ -87,7 +91,14 @@ public:
         if (!this->hasRenderedFrame) {
             this->hasRenderedFrame = true;
             this->lastFrameTime = now;
-            this->init(*this, api);
+            this->onStart(*this, api);
+        }
+
+        if (api != this->lastApi) {
+            this->lastApi = api;
+            if (this->onDisplayUpdate) {
+                this->onDisplayUpdate(*this, api);
+            }
         }
 
         if (this->currentScene == nullptr) {
@@ -111,6 +122,9 @@ public:
 
         CoreAction next = pendingActions.front();
         pendingActions.pop_front();
+        if (next.type == CoreActionType::SwitchGraphics) {
+            this->lastApi = nullptr;
+        }
         return next;
     }
 };
