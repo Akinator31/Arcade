@@ -62,6 +62,8 @@ Compiled shared libraries are emitted to `build/lib/` by default.
 
 ## Documentation
 
+Online documentation: https://akinator31.github.io/Arcade/
+
 Generate Doxygen pages from code and markdown:
 
 ```bash

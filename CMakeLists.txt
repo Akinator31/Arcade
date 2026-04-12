@@ -44,122 +44,147 @@ target_sources(arcade_engine_headers INTERFACE ${ALL_ENGINE_HEADERS})
 target_link_libraries(arcade_engine_headers INTERFACE arcade_shared_iface)
 
 if (BUILD_GAMES OR BUILD_TESTS)
-  add_library(arcade_ecs OBJECT ${ECS_SRC})
-  set_target_properties(arcade_ecs PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  target_include_directories(arcade_ecs PUBLIC src)
-  target_link_libraries(arcade_ecs PUBLIC arcade_shared_iface arcade_engine_headers)
-  target_compile_options(arcade_ecs PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    add_library(arcade_ecs OBJECT ${ECS_SRC})
+    set_target_properties(arcade_ecs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_include_directories(arcade_ecs PUBLIC src)
+    target_link_libraries(arcade_ecs PUBLIC arcade_shared_iface arcade_engine_headers)
+    target_compile_options(arcade_ecs PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
 endif ()
 
 if (BUILD_PLATFORM_LIBS)
-  find_package(SFML 3 REQUIRED COMPONENTS System Window Graphics)
-  find_package(SDL2 REQUIRED)
-  find_package(SDL2_image REQUIRED)
-  find_package(SDL2_ttf REQUIRED)
-  find_package(Curses REQUIRED)
+    find_package(SFML 3 QUIET COMPONENTS System Window Graphics)
+    find_package(SDL2 QUIET)
+    find_package(SDL2_image QUIET)
+    find_package(SDL2_ttf QUIET)
+    find_package(Curses QUIET)
 
-  add_library(sfml_api SHARED
-            src/graphics/sfml/SfmlApi.cpp
-            src/graphics/sfml/SfmlApi.hpp
-    )
-  target_include_directories(sfml_api PRIVATE src/graphics/sfml)
-  target_link_libraries(sfml_api PRIVATE arcade_shared arcade_shared_iface SFML::Graphics)
-  target_compile_options(sfml_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
-  target_link_options(sfml_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
-  set_target_properties(sfml_api PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-            OUTPUT_NAME arcade_sfml
-            PREFIX ""
-    )
+    if (TARGET SFML::Graphics)
+        add_library(sfml_api SHARED
+                src/graphics/sfml/SfmlApi.cpp
+                src/graphics/sfml/SfmlApi.hpp
+        )
+        target_include_directories(sfml_api PRIVATE src/graphics/sfml)
+        target_link_libraries(sfml_api PRIVATE arcade_shared arcade_shared_iface SFML::Graphics)
+        target_compile_options(sfml_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+        target_link_options(sfml_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+        set_target_properties(sfml_api PROPERTIES
+                LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+                OUTPUT_NAME arcade_sfml
+                PREFIX ""
+        )
+    else ()
+        message(WARNING "Skipping SFML backend (arcade_sfml): SFML 3 not found.")
+    endif ()
 
-  add_library(sdl_api SHARED
-            src/graphics/sdl/SdlApi.cpp
-            src/graphics/sdl/SdlApi.hpp
-    )
-  target_include_directories(sdl_api PRIVATE src/graphics/sdl)
-  target_link_libraries(sdl_api PRIVATE
-            arcade_shared
-            arcade_shared_iface
-            SDL2::SDL2
-            SDL2::SDL2main
-            SDL2_image::SDL2_image
-            SDL2_ttf::SDL2_ttf
-    )
-  target_compile_options(sdl_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
-  target_link_options(sdl_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
-  set_target_properties(sdl_api PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-            OUTPUT_NAME arcade_sdl
-            PREFIX ""
-    )
+    if (TARGET SDL2::SDL2 AND TARGET SDL2_image::SDL2_image AND TARGET SDL2_ttf::SDL2_ttf)
+        set(SDL2_MAIN_TARGET "")
+        if (TARGET SDL2::SDL2main)
+            set(SDL2_MAIN_TARGET SDL2::SDL2main)
+        endif ()
 
-  add_library(ncurses_api SHARED
-            src/graphics/ncurses/NcursesApi.cpp
-            src/graphics/ncurses/NcursesApi.hpp
-    )
-  target_include_directories(ncurses_api PRIVATE src/graphics/ncurses ${CURSES_INCLUDE_DIRS})
-  target_link_libraries(ncurses_api PRIVATE
-            arcade_shared
-            arcade_shared_iface
-            ${CURSES_LIBRARIES}
-    )
-  target_compile_options(ncurses_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
-  target_link_options(ncurses_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
-  set_target_properties(ncurses_api PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-            OUTPUT_NAME arcade_ncurses
-            PREFIX ""
-    )
+        add_library(sdl_api SHARED
+                src/graphics/sdl/SdlApi.cpp
+                src/graphics/sdl/SdlApi.hpp
+        )
+        target_include_directories(sdl_api PRIVATE src/graphics/sdl)
+        target_link_libraries(sdl_api PRIVATE
+                arcade_shared
+                arcade_shared_iface
+                SDL2::SDL2
+                ${SDL2_MAIN_TARGET}
+                SDL2_image::SDL2_image
+                SDL2_ttf::SDL2_ttf
+        )
+        target_compile_options(sdl_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+        target_link_options(sdl_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+        set_target_properties(sdl_api PROPERTIES
+                LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+                OUTPUT_NAME arcade_sdl
+                PREFIX ""
+        )
+    else ()
+        message(WARNING "Skipping SDL backend (arcade_sdl): missing one or more dependencies (SDL2, SDL2_image, SDL2_ttf).")
+    endif ()
+
+    if (CURSES_FOUND)
+        add_library(ncurses_api SHARED
+                src/graphics/ncurses/NcursesApi.cpp
+                src/graphics/ncurses/NcursesApi.hpp
+        )
+        target_include_directories(ncurses_api PRIVATE src/graphics/ncurses ${CURSES_INCLUDE_DIRS})
+        if (TARGET Curses::Curses)
+            target_link_libraries(ncurses_api PRIVATE
+                    arcade_shared
+                    arcade_shared_iface
+                    Curses::Curses
+            )
+        else ()
+            target_link_libraries(ncurses_api PRIVATE
+                    arcade_shared
+                    arcade_shared_iface
+                    ${CURSES_LIBRARIES}
+            )
+        endif ()
+        target_compile_options(ncurses_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+        target_link_options(ncurses_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+        set_target_properties(ncurses_api PROPERTIES
+                LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+                OUTPUT_NAME arcade_ncurses
+                PREFIX ""
+        )
+    else ()
+        message(WARNING "Skipping ncurses backend (arcade_ncurses): Curses/ncurses not found.")
+    endif ()
 endif ()
 
 if (BUILD_CORE_PROGRAM)
-  add_executable(arcade src/main.cpp)
-  target_include_directories(arcade PRIVATE src/core)
-  target_link_libraries(arcade PRIVATE ${CMAKE_DL_LIBS} arcade_shared_iface arcade_engine_headers)
-  target_compile_options(arcade PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
-  target_link_options(arcade PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+    add_executable(arcade src/main.cpp)
+    target_include_directories(arcade PRIVATE src/core)
+    target_link_libraries(arcade PRIVATE ${CMAKE_DL_LIBS} arcade_shared_iface arcade_engine_headers)
+    target_compile_options(arcade PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    target_link_options(arcade PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
 endif ()
 
 if (BUILD_GAMES)
-  add_library(game_menu SHARED
+    add_library(game_menu SHARED
             src/games/menu/GameMenu.cpp
             src/games/menu/GameMenu.hpp
     )
-  target_sources(game_menu PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
-  target_include_directories(game_menu PRIVATE src src/games/menu)
-  target_link_libraries(game_menu PRIVATE arcade_shared arcade_shared_iface arcade_engine_headers ${CMAKE_DL_LIBS})
-  target_compile_options(game_menu PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
-  target_link_options(game_menu PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
-  set_target_properties(game_menu PROPERTIES
+    target_sources(game_menu PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
+    target_include_directories(game_menu PRIVATE src src/games/menu)
+    target_link_libraries(game_menu PRIVATE arcade_shared arcade_shared_iface arcade_engine_headers ${CMAKE_DL_LIBS})
+    target_compile_options(game_menu PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    target_link_options(game_menu PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+    set_target_properties(game_menu PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
             OUTPUT_NAME arcade_menu
             PREFIX ""
     )
 
-  add_library(pacman_game SHARED
+    add_library(pacman_game SHARED
             src/games/pacman/Pacman.cpp
     )
-  target_sources(pacman_game PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
-  target_include_directories(pacman_game PRIVATE src src/games/pacman)
-  target_link_libraries(pacman_game PRIVATE arcade_shared arcade_shared_iface)
-  target_compile_options(pacman_game PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
-  target_link_options(pacman_game PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
-  set_target_properties(pacman_game PROPERTIES
+    target_sources(pacman_game PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
+    target_include_directories(pacman_game PRIVATE src src/games/pacman)
+    target_link_libraries(pacman_game PRIVATE arcade_shared arcade_shared_iface)
+    target_compile_options(pacman_game PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    target_link_options(pacman_game PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+    set_target_properties(pacman_game PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
             OUTPUT_NAME arcade_pacman
             PREFIX ""
     )
 
-  add_library(snake_game SHARED
+    add_library(snake_game SHARED
             src/games/snake/Snake.cpp
             src/games/snake/SnakeGameplayPlugin.hpp
     )
-  target_sources(snake_game PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
-  target_include_directories(snake_game PRIVATE src src/games/snake)
-  target_link_libraries(snake_game PRIVATE arcade_shared arcade_shared_iface)
-  target_compile_options(snake_game PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
-  target_link_options(snake_game PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
-  set_target_properties(snake_game PROPERTIES
+    target_sources(snake_game PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
+    target_include_directories(snake_game PRIVATE src src/games/snake)
+    target_link_libraries(snake_game PRIVATE arcade_shared arcade_shared_iface)
+    target_compile_options(snake_game PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    target_link_options(snake_game PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+    set_target_properties(snake_game PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
             OUTPUT_NAME arcade_snake
             PREFIX ""
@@ -167,22 +192,22 @@ if (BUILD_GAMES)
 endif ()
 
 if (BUILD_TESTS)
-  enable_testing()
-  find_library(CRITERION_LIB criterion)
+    enable_testing()
+    find_library(CRITERION_LIB criterion)
 
-  if (CRITERION_LIB)
-    add_executable(unittests ${TEST_SRC})
-    target_sources(unittests PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
-    target_include_directories(unittests PRIVATE src tests)
-    target_link_libraries(unittests PRIVATE arcade_shared arcade_shared_iface ${CRITERION_LIB} ${CMAKE_DL_LIBS} arcade_engine_headers)
-    target_compile_options(unittests PRIVATE
+    if (CRITERION_LIB)
+        add_executable(unittests ${TEST_SRC})
+        target_sources(unittests PRIVATE $<TARGET_OBJECTS:arcade_ecs>)
+        target_include_directories(unittests PRIVATE src tests)
+        target_link_libraries(unittests PRIVATE arcade_shared arcade_shared_iface ${CRITERION_LIB} ${CMAKE_DL_LIBS} arcade_engine_headers)
+        target_compile_options(unittests PRIVATE
                 ${ARCADE_COMMON_COMPILE_OPTIONS}
                 --coverage
                 ${ARCADE_SANITIZER_COMPILE_OPTIONS}
         )
-    target_link_options(unittests PRIVATE --coverage ${ARCADE_SANITIZER_LINK_OPTIONS})
-    add_test(NAME unittests COMMAND unittests)
-  else ()
-    message(WARNING "Criterion library not found ! Target 'unittests' will not be created.")
-  endif ()
+        target_link_options(unittests PRIVATE --coverage ${ARCADE_SANITIZER_LINK_OPTIONS})
+        add_test(NAME unittests COMMAND unittests)
+    else ()
+        message(WARNING "Criterion library not found ! Target 'unittests' will not be created.")
+    endif ()
 endif ()

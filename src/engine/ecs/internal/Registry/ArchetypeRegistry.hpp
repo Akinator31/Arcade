@@ -14,7 +14,7 @@ namespace ecs::internal {
 
     class ArchetypeRegistry {
         std::unordered_map<EntityType, ArchetypeID, EntityTypeHasher> archetypes_map;
-        ComponentRegistry &componentRegistry;
+        [[maybe_unused]] ComponentRegistry &componentRegistry;
 
     public:
         std::vector<Archetype> archetypes;

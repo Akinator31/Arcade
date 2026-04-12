@@ -1,8 +1,8 @@
 #include "engine/ecs/World.hpp"
 #include <criterion/criterion.h>
 
-#include "plugins/DefaultPlugins.hpp"
-#include "plugins/render/UiPlugin/UiPlugin.hpp"
+#include "engine/plugins/DefaultPlugin.hpp"
+#include "engine/plugins/render/UiPlugin/UiPlugin.hpp"
 
 struct Player {
 };

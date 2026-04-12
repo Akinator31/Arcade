@@ -20,6 +20,7 @@ size_t EntityTypeHasher::operator()(const ecs::EntityType &e) const noexcept {
 }
 
 namespace ecs::internal {
+
     ArchetypeRegistry::ArchetypeRegistry(ComponentRegistry &componentRegistry)
         : componentRegistry(componentRegistry) {
     }
