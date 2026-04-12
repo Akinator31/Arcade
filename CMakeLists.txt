@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(ENABLE_SANITIZERS "Build with sanitizers" OFF)
 option(BUILD_CORE_PROGRAM "Build the core arcade executable" ON)
 option(BUILD_PLATFORM_LIBS "Build platform dynamic libraries" ON)
-option(BUILD_TESTS "Build unit tests" ON)
+option(BUILD_TESTS "Build unit tests" OFF)
 option(BUILD_GAMES "Build game dynamic libraries" ON)
 
 include(FetchContent)
