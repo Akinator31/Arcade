@@ -1,5 +1,6 @@
 #include <iostream>
 #include <memory>
+#include "core/ExeDir.hpp"
 #include "core/dynamic/GameLoader.hpp"
 #include "core/dynamic/GraphicsLoader.hpp"
 #include "IDisplayModule.hpp"
@@ -11,8 +12,10 @@ int main(const int argc, char **argv) {
         return 1;
     }
 
+    const std::string menu_game_path = lib_directory() + "/arcade_game_menu.so";
+
     auto graphics_loader = std::make_unique<GraphicsApiLoader>(argv[1]);
-    auto game_loader = std::make_unique<GameLoader>("lib/arcade_game_menu.so");
+    auto game_loader = std::make_unique<GameLoader>(menu_game_path);
 
     IDisplayModule *api = graphics_loader->call<Create>();
     IGameModule *game = game_loader->call<LoadGame>();
@@ -27,7 +30,7 @@ int main(const int argc, char **argv) {
 
         if (api->isKeyPressed(KeyboardCode::M)) {
             game_loader->call<UnloadGame>(game);
-            game_loader = std::make_unique<GameLoader>("lib/arcade_game_menu.so");
+            game_loader = std::make_unique<GameLoader>(menu_game_path);
             game = game_loader->call<LoadGame>();
             api->loadResources(game->getResources());
         }
@@ -42,11 +45,13 @@ int main(const int argc, char **argv) {
                     break;
                 }
                 case CoreActionType::SwitchGraphics: {
+                    USize prevSize = api->getWindowSize();
                     api->shutdown();
                     graphics_loader->call<Destroy>(api);
                     graphics_loader = std::make_unique<GraphicsApiLoader>(action->target);
                     api = graphics_loader->call<Create>();
                     api->init();
+                    api->setWindowSize(prevSize);
                     api->loadResources(game->getResources());
                     break;
                 }

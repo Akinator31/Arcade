@@ -254,11 +254,13 @@ void NcursesGraphicsApi::loadResources(const std::vector<Resource>&) {
 }
 
 extern "C" {
-IDisplayModule* create() {
+LibType LIB_TYPE = GRAPHIC;
+
+IDisplayModule *load() {
     return new NcursesGraphicsApi();
 }
 
-void destroy(const IDisplayModule* api) {
+void unload(const IDisplayModule *api) {
     delete api;
 }
 }
