@@ -91,6 +91,23 @@ if (BUILD_PLATFORM_LIBS)
             OUTPUT_NAME arcade_sdl
             PREFIX ""
     )
+
+    add_library(ncurses_api SHARED
+            src/graphics/ncurses/NcursesApi.cpp
+            src/graphics/ncurses/NcursesApi.hpp
+    )
+    target_include_directories(ncurses_api PRIVATE src/graphics/ncurses)
+    target_link_libraries(ncurses_api PRIVATE
+            arcade_shared
+            arcade_shared_iface
+    )
+    target_compile_options(ncurses_api PRIVATE ${ARCADE_COMMON_COMPILE_OPTIONS} ${ARCADE_SANITIZER_COMPILE_OPTIONS})
+    target_link_options(ncurses_api PRIVATE ${ARCADE_SANITIZER_LINK_OPTIONS})
+    set_target_properties(ncurses_api PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+            OUTPUT_NAME arcade_ncurses
+            PREFIX ""
+    )
 endif ()
 
 if (BUILD_CORE_PROGRAM)
