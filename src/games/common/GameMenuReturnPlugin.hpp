@@ -22,7 +22,7 @@ SYSTEM(ReturnToMenuOnEscapeSys, On<Update>) {
         if (escapePressed && !state->escapeHeld) {
             engine->pendingActions.push_back(CoreAction{
                 .type = CoreActionType::SwitchGame,
-                .target = "./cmake-build-debug/lib/arcade_game_menu.so"
+                .target = "./lib/arcade_game_menu.so"
             });
         }
         state->escapeHeld = escapePressed;
